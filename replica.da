@@ -1,9 +1,25 @@
 # type: ignore
+import nacl.utils
+from nacl.signing import SigningKey
+from nacl.signing import VerifyKey
+
+
 class Replica(process):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap):
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
-        print("I am replica", self, "and my keys are ", self.privateKey,
-              self.clientPublicKeyMap, self.replicaPublicKeyMap, "\n\n")
-        pass
+
+    def receive(msg=("PrepareHandler",  digest), from_=c):
+        print(digest.message, digest.signature)
+        # output("received message prepare from client ", c)
+        verify_key = VerifyKey(self.clientPublicKeyMap[c])
+        # print(self, " am verifying from client ", c,
+        #       verify_key.verify(digest))
+        # forged = digest[:-1] + bytes([int(digest[-1]) ^ 1])
+        # print(verify_key.verify(forged))
+
+        send(("Prepared",), to=c)
+
+    def run():
+        await(some(received(("Prepare",),)))

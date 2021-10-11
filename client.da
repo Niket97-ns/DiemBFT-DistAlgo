@@ -1,10 +1,23 @@
 # type: ignore
+import replica
+
+import nacl.utils
+from nacl.signing import SigningKey
+
 
 class Client(process):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap):
+
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
-        print("I am client", self, "and my keys are ", self.privateKey,
-              self.clientPublicKeyMap, self.replicaPublicKeyMap, "\n\n")
+
+    def run():
+        send(("PrepareHandler", self.privateKey.sign(b"Prepare"), ),
+             to=self.replicaPublicKeyMap.keys())
+        await(some(received(("Prepare",),)))
+
+    def receive(msg=("Prepared",), from_=c):
         pass
+        # output("received message prepared from replica ", c)
+        # send(("Prepared",), to=c)

@@ -2,7 +2,7 @@
 import replica
 import client
 import nacl.utils
-from nacl.public import PrivateKey, Box
+from nacl.signing import SigningKey
 
 
 class DiemBFT(process):
@@ -11,9 +11,9 @@ class DiemBFT(process):
         self.numberOfReplicas = config["numberOfReplicas"]
 
     def generateKeys():
-        sk = PrivateKey.generate()
-        pk = sk.public_key
-        return (sk, pk)
+        sk = SigningKey.generate()
+        pk = sk.verify_key
+        return (sk, pk.encode())
 
     def run():
         replicas = new(replica.Replica, num=self.numberOfReplicas)
@@ -29,9 +29,11 @@ class DiemBFT(process):
         for r in replicas:
             setup(r, (privateKeyMap[r],
                       clientPublicKeyMap, replicaPublicKeyMap,))
+            start(r)
         for c in clients:
             setup(c, (privateKeyMap[c],
                       clientPublicKeyMap, replicaPublicKeyMap, ))
+            start(c)
 
 
 def main():
