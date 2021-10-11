@@ -1,0 +1,11 @@
+# type: ignore
+from block import Block
+from qc import QC
+class BlockTree:
+
+    def __init__(self) -> None:
+        self.high_qc = QC()
+        self.high_qc = QC()
+
+    def generate_block(self, txns, curr_round):
+        return Block(curr_round, txns, self.high_qc)
