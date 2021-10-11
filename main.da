@@ -1,0 +1,45 @@
+# type: ignore
+import replica
+import client
+import nacl.utils
+from nacl.public import PrivateKey, Box
+
+
+class DiemBFT(process):
+    def setup(config):
+        self.numberOfClients = config["numberOfClients"]
+        self.numberOfReplicas = config["numberOfReplicas"]
+
+    def generateKeys():
+        sk = PrivateKey.generate()
+        pk = sk.public_key
+        return (sk, pk)
+
+    def run():
+        replicas = new(replica.Replica, num=self.numberOfReplicas)
+        clients = new(client.Client, num=self.numberOfClients)
+        replicaPublicKeyMap, clientPublicKeyMap = {}, {}
+        privateKeyMap = {}
+        for r in replicas:
+            privateKeyMap[r], replicaPublicKeyMap[r] = generateKeys()
+
+        for c in clients:
+            privateKeyMap[c], clientPublicKeyMap[c] = generateKeys()
+
+        for r in replicas:
+            setup(r, (privateKeyMap[r],
+                      clientPublicKeyMap, replicaPublicKeyMap,))
+        for c in clients:
+            setup(c, (privateKeyMap[c],
+                      clientPublicKeyMap, replicaPublicKeyMap, ))
+
+
+def main():
+
+    config(clock="Lamport")
+    configs = [{"numberOfClients": 2, "numberOfReplicas": 5}]
+
+    for config in configs:
+        p = new(DiemBFT)
+        setup(p, (config,))
+        start(p)

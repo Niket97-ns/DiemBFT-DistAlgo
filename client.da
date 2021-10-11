@@ -1,0 +1,10 @@
+# type: ignore
+
+class Client(process):
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap):
+        self.privateKey = privateKey
+        self.clientPublicKeyMap = clientPublicKeyMap
+        self.replicaPublicKeyMap = replicaPublicKeyMap
+        print("I am client", self, "and my keys are ", self.privateKey,
+              self.clientPublicKeyMap, self.replicaPublicKeyMap, "\n\n")
+        pass
