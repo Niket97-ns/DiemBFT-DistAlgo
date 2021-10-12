@@ -5,9 +5,42 @@ from qc import QC
 
 class BlockTree:
 
-    def __init__(self) -> None:
-        self.high_qc = QC()
+    def __init__(self, high_qc, high_commit_qc, f) -> None:
+        self.high_qc = high_qc
         self.high_commit_qc = QC()
+        self.f = f
+        # TODO need to create a tree structure somehow
+        self.pending_block_tree = None 
+        
+        # TODO dictonary for now
+        self.pending_votes = {}
+
+    def process_qc(self):
+        if qc.ledger_commit_info.commit_state_id != None:
+            Ledger.commit(qc.vote_info.parent_id)
+            pending_block_tree.prun(qc.vote_info.parent_id) # parent becomes new root we remove the committed message from the ppending tree
+            
+            # still a bit doubtful
+            if qc.vote_info.round > self.high_commit_qc.vote_info.round:
+                self.high_commit_qc = qc
+        if qc.vote_info.round > self.high_qc.vote_info_round:
+            self.high_qc = qc
+    
+    def execute_and_insert(self):
+        self.process_qc(v.high_commit_qc)
+        vote_idx = hash(v.ledger_commit_info)
+        self.pending_votes[vote_idx] = self.pending_votes[vote_idx].add(v.signature)
+        if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:
+
+            ## Alert NOT sure about exe_state_id
+            qc = QC(v.vote_info, v.vote_info.exec_state_id)
+
+            return qc
+        
+
+
+
+
 
     def generate_block(self, txns, curr_round):
         return Block(curr_round, txns, self.high_qc)

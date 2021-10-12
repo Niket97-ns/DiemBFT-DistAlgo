@@ -1,6 +1,7 @@
 # type: ignore
 class VoteInfo:
-    def __init__(self, id, round, parent_id, parent_round, exec_state_id) -> None:
+    # better default values for initialization.
+    def __init__(self, id = -1, round = -1, parent_id = 0, parent_round = -1, exec_state_id = -1) -> None:
         self.id = id
         self.round = round
         self.parent_id = parent_id
