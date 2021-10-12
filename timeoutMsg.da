@@ -1,0 +1,11 @@
+# type: ignore
+
+class TimeoutMsg():
+    def __init__(self, tmo_info, last_round_tc, high_commit_qc):
+        self.tmo_info = tmo_info    # TimeoutInfo for some round with high_qc
+
+        # TC for tmo_info_round-1 if tmo_info.high_qc.round != tmo_info.round-1 , else None
+        self.last_round_tc = last_round_tc
+
+        # QC to synchronize on committed blocks
+        self.high_commit_qc = high_commit_qc

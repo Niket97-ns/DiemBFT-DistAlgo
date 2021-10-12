@@ -1,0 +1,13 @@
+# type: ignore
+class ProposalMsg():
+
+    def __init__(self, sender,  block, last_round_tc, high_commit_qc):
+        self.sender = sender
+        self.block = block
+
+        # TC for block.round-1 if blcok.qc.vote_info.round != block.round -1,  else None
+        self.last_round_tc = last_round_tc
+
+        # QC to synchronize on committed blocks
+        self.high_commit_qc = high_commit_qc
+        self.signature = util.sign(self.sender, self.block.id)

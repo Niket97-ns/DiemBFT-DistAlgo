@@ -1,0 +1,7 @@
+def hash(x):
+    return x
+
+
+def sign(author, *args):
+    s = "~".join(list(args))
+    return author.privateKey.sign(str.encode(s))

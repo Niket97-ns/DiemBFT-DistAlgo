@@ -1,0 +1,12 @@
+# type: ignore
+import util
+import nacl.utils
+# from nacl.signing import SigningKey
+
+
+class TimeOutInfo():
+    def __init__(self, sender, round, high_qc):
+        self.round = round
+        self.high_qc = high_qc
+        self.sender = sender
+        self.signature = util.sign(self.sender, round, high_qc.round)

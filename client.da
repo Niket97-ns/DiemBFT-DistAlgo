@@ -19,5 +19,3 @@ class Client(process):
 
     def receive(msg=("Prepared",), from_=c):
         pass
-        # output("received message prepared from replica ", c)
-        # send(("Prepared",), to=c)
