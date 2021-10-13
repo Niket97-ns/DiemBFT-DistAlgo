@@ -1,0 +1,59 @@
+# type: ignore
+
+class LeaderElection:
+    def __init__(self, validators, window_size, exclude_size, reputation_leaders) -> None:
+        self.validators = validators
+        self.window_size = window_size
+        self.exclude_size = exclude_size
+        self.reputation_leaders = reputation_leaders
+    
+    def minus(self, active_validators, last_authors):
+        # TODO: Change this to actually remove last_authors after you know the data types
+        return active_validators
+
+    def update_leaders(self, qc):
+        extended_round = qc.vote_info.parent_round
+        qc_round = qc.vote_info.round
+        current_round = pace_maker.PaceMaker.current_round
+        if extended_round + 1 == qc_round and qc_round + 1 == current_round:
+            self.reputation_leaders[current_round+1] = election_reputation_leader(qc)
+
+    def get_round_robin_leader(self, round, validators):
+        idx = (round//2) % len(validators)
+        return validators[idx]
+
+    def pick_one(self, seed):
+        # TODO: How to use seed to pick one?
+        idx = (seed//2) % len(self.validators)
+        return self.validators[idx]
+
+    def get_leader(self, round):
+        if round in self.reputation_leaders:
+            return self.reputation_leaders[round]
+        return self.get_round_robin_leader(round, self.validators)
+
+    def elect_reputation_leader(self, qc):
+        active_validators = [] #?
+        last_authors = [] #?
+        current_qc = qc
+        i = 0
+        while i < self.window_size or len(last_authors) < self.exclude_size:
+            current_block = None 
+            # TODO: Uncomment after adding code
+            # current_block = Ledger.committed_block(current_qc.vote_info.parent_id)
+            block_author = current_block.author
+            
+            if i < self.window_size:
+                active_validators.append(current_qc.signatures.signers())
+            
+            if len(last_authors) < self.exclude_size:
+                last_authors.append(block_author)
+
+            current_qc = current_block.qc
+            i = i+1
+
+        active_validators = self.minus(active_validators, last_authors)
+        # TODO: What is seed? How to pick one?
+        # return active_validators.pick_one(seed <- )
+        return self.pick_one(qc.vote_info.round)
+
