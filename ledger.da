@@ -51,6 +51,7 @@ class Ledger:
             to_be_committed_state.is_committed = True
             self.committed_ledger_tree.add(block_id, to_be_committed_state)
             del self.pending_ledger_tree[block_id]
+            # TODO: Prune logic remaining
         except:
             print("Could not commit ledger state for block id: ", block_id)
 
