@@ -1,16 +1,17 @@
-# type: ignore
-from block_tree import BlockTree
+# # type: ignore
+# from block_tree import BlockTree
 
 
-class BlockTreeNode:
+# class BlockTreeNode:
 
-    def __init__(self):
-        self.children = {}
+#     def __init__(self):
+#         # self.children = {}
+#         self.
 
 
-class PendingBlockTree:
-    def __init__(self):
-        self.root = BlockTreeNode()
+# class PendingBlockTree:
+#     def __init__(self):
+#         self.root = BlockTreeNode()
 
-    def add(self, block):
-        self.root.children[block.id] = BlockTreeNode()
+#     def add(self, block):
+#         self.root.children[block.id] = BlockTreeNode()

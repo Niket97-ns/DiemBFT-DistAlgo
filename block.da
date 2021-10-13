@@ -6,3 +6,6 @@ class Block:
         self.qc = highest_qc
         self.payload = txns
         # self.id = hash(author, round, payload, qc.vote_info.id, qc.signature)
+
+    def get_parent_id(self):
+        return self.qc.vote_info.id
