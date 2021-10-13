@@ -1,0 +1,23 @@
+# type: ignore
+from typing import DefaultDict
+from ledger_stateLedgerState,  imprt LedgerState
+
+
+class Ledger:
+
+    def __init__(self):
+
+        self.ledgerFile = None
+        self.committed_ledger_states = DefaultDict()
+        self.pending_ledger_states = DefaultDict()
+        self.block_to_state_map = DefaultDict()
+
+    def speculate(self, prev_block_id, block_id, txns):
+        prev_state_id = self.block_to_state_map.get(prev_block_id, None)
+        state_id = hash(prev_state_id, txns)
+        self.pending_ledger_states[block_id] = LedgerState(
+            prev_block_id, block_id, txns, state_id)
+        self.block_to_state_map[block_id] = state_id
+
+    def pending_state(self, block_id):
+        return self.pending_ledger_states.get(block_id, None)
