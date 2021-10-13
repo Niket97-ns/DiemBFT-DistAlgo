@@ -1,7 +1,12 @@
 # type: ignore
+from ledger import LedgerTree
+
 
 class LedgerState:
-    def __init__(self, prev_block_id, block_id, txns, state_id):
-        self.prev_block_id = prev_block_id
+
+    def __init__(self, state_id, block_id, parent_block_id, txns):
         self.block_id = block_id
+        self.parent_block_id = parent_block_id
         self.txns = txns
+        self.state_id = state_id
+        self.is_committed = False
