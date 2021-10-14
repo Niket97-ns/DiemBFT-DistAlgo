@@ -10,8 +10,6 @@ class PendingBlockTree:
 
     def __init__(self) -> None:
         self.id_to_block = {}  # Map: id - block
-
-    def __init__(self) -> None:
         self.root = None
         self.current_leaf = None
 
@@ -49,9 +47,6 @@ class PendingBlockTree:
                 del self.id_to_block[block_id]
 
         self.root = self.id_to_block[parent_id]
-
-    def get_block(self, block_id):
-        return self.id_to_block[block_id]
 
 
 class BlockTree:
