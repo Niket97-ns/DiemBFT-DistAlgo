@@ -1,25 +1,121 @@
 # type: ignore
+# from _typeshed import Self
 import nacl.utils
 from nacl.signing import SigningKey
 from nacl.signing import VerifyKey
 
+from block_tree import BlockTree
+from leader_election import LeaderElection
+from pacemaker import Pacemaker
+from safety import Safety
+from mempool import Mempool
 
 class Replica(process):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap):
+
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
+        self.replicaPublicKeyMap.pop(self)
+        self.commit_catch = {}
 
-    def receive(msg=("PrepareHandler",  digest), from_=c):
-        print(digest.message, digest.signature)
-        # output("received message prepare from client ", c)
-        verify_key = VerifyKey(self.clientPublicKeyMap[c])
-        # print(self, " am verifying from client ", c,
-        #       verify_key.verify(digest))
-        # forged = digest[:-1] + bytes([int(digest[-1]) ^ 1])
-        # print(verify_key.verify(forged))
+        self.blockTree = BlockTree()
+        self.leaderElection = LeaderElection()
+        self.paceMaker = Pacemaker()
+        self.safety = Safety()
+        self.mempool = Mempool()
 
-        send(("Prepared",), to=c)
+    # def receive(msg=("PrepareHandler1",   ), from_=c):
+    #     print("reached PreareHandler1")
+    #     # print(digest.message, digest.signature)
+    #     # output("received message prepare from client ", c)
+    #     verify_key = VerifyKey(self.clientPublicKeyMap[c])
+    #     # print(self, " am verifying from client ", c,
+    #     #       verify_key.verify(digest))
+    #     # forged = digest[:-1] + bytes([int(digest[-1]) ^ 1])
+    #     # print(verify_key.verify(forged))
+
+    #     send(("Prepared1",), to=c)
+    
+    # def receive(msg=("PrepareHandler2",  digest), from_=c):
+    #     print("reached PreareHandler2")
+    #     # print(digest.message, digest.signature)
+    #     # output("received message prepare from client ", c)
+    #     verify_key = VerifyKey(self.clientPublicKeyMap[c])
+    #     # print(self, " am verifying from client ", c,
+    #     #       verify_key.verify(digest))
+    #     # forged = digest[:-1] + bytes([int(digest[-1]) ^ 1])
+    #     # print(verify_key.verify(forged))
+
+    #     send(("Prepared2",), to=c)
+
+    def receive(msg = ("process_certificate_qc", qc), from_ = c):
+        self.blockTree.process_qc(qc)
+        self.leaderElection.update_leaders(qc)
+        self.paceMaker.advance_round(qc.vote_info.round)
+
+    
+    def process_certificate_qc(qc):
+        self.blockTree.process_qc(qc)
+        self.leaderElection.update_leaders(qc)
+        self.paceMaker.advance_round(qc.vote_info.round)
+
+    def process_new_round_event(last_tc):
+        u = self.leaderElection.get_leader(self.paceMaker.current_round)
+
+        # Not sure what they are trying to check
+        if u != None:
+
+            # Create proposal Look into it again
+            b = self.blockTree.generate_block(self.mempool.get_transactions(), self.paceMaker.current_round)
+
+            # Handle this shit 
+            send(("process_proposal_message", b), to=self.replicaPublicKeyMap.keys())
+
+
+    # I am confused if this is the same vote handler
+    # because the sequence of these proceders in the papaer is different
+    def receive(msg= ("process_vote_msg", M), from_ = c):
+        qc  = self.blockTree.process_vote(M)
+        if qc != None:
+            self.process_certificate_qc(qc)
+            self.process_new_round_event(None)
+
+    def receive(msg= ("process_proposal_message", P)):
+        self.process_certificate_qc(P.block.qc)
+        self.process_certificate_qc(P.high_commit_qc)
+        self.paceMaker.advance_round_tc(P.last_round_qc)
+        round = self.paceMaker.current_round
+
+        # it should be round but name converntions was a bit weird
+        leader = self.leaderElection.get_leader(round)
+
+        # need to confirm the data type of leader variable
+        if P.block.round != round or P.sender != leader or P.block_author != leader:
+            return None
+        
+        self.blockTree.execute_and_insert(P)
+        vote_msg = self.safety.make_vote(P.block, P.last_round_tc)
+        if vote_msg != None:
+            # need to find receive handler for this send
+            new_leader_name = self.leaderElection.get_leader(round  + 1)
+
+            # need to decide the message
+            send(("process_vote_msg", P), to=new_leader_name)
+
+    def receive(msg = ("process_timeout_message", M), from_ = c):
+        self.process_certificate_qc(M.tmo_info.high_qc)
+        self.process_certificate_qc(M.high_commit_qc)
+        self.paceMaker.advance_round_tc(M.last_round_tc)
+        tc = self.paceMaker.process_remote_timeout(M)
+        if tc != None:
+            self.paceMaker.advance_round(tc)
+            self.process_new_round_event(tc)
+        
 
     def run():
-        await(some(received(("Prepare",),)))
+        await(some(received(("process_vote_msg", M),)))
+        await(some(received(("process_proposal_message", M),)))
+        await(some(received(("process_timeout_message", M),)))
+
+       
