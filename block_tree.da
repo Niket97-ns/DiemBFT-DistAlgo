@@ -5,15 +5,14 @@ import defaultdict
 # from block_tree_node import PendingBlockTree, BlockTreeNode
 from ledger import Ledger
 
+
 class PendingBlockTree:
 
     def __init__(self) -> None:
         self.id_to_block = {}  # Map: id - block
-
-    def __init__(self) -> None:
         self.root = None
         self.current_leaf = None
-    
+
     def __fork_and_add(self, block):
         # abandon current_leaf
         self.id_to_block.pop(self.current_leaf)
@@ -31,7 +30,7 @@ class PendingBlockTree:
         self.current_leaf = block
         # since block already has qc, which already has block_id of parent
         # is there any other specific pointer to the parent even needed?
-        # the map should take care of it imo 
+        # the map should take care of it imo
 
     def prune(self, parent_id):
         # this parent_id will be the new root
@@ -46,8 +45,9 @@ class PendingBlockTree:
         for block_id in self.id_to_block:
             if block_id not in blocks_in_curr_branch:
                 del self.id_to_block[block_id]
-        
+
         self.root = self.id_to_block[parent_id]
+
 
 class BlockTree:
 

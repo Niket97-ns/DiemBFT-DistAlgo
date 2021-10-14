@@ -3,19 +3,60 @@ import replica
 
 import nacl.utils
 from nacl.signing import SigningKey
+import random
+import time
 
 
 class Client(process):
-    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap):
-
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, faulty_replicas, number_of_requests, seed, t):
+        self.faulty_replicas = faulty_replicas
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
+        self.number_of_requests = number_of_requests
+        self.request_number = 1
+        self.sequence_number = 1
+        random.seed(seed)
+        self.delay = set_initial_delay()
+        self.responseMap = {}
+        self.t = t
+        self.committed_requests = set()
 
     def run():
-        send(("PrepareHandler", self.privateKey.sign(b"Prepare"), ),
-             to=self.replicaPublicKeyMap.keys())
-        await(some(received(("Prepare",),)))
+        time.sleep(self.delay)
+        self.delay = set_initial_delay()
+        request = str(self)+"-"+str(request_number)
+        # TODO: use another variable to store validators
+        send(('Request', request,), to=self.replicaPublicKeyMap.keys())
+        await(some(received("ResponseHandler", (response, response_digest, request_number,))))
 
-    def receive(msg=("Prepared",), from_=c):
-        pass
+    def set_initial_delay():
+        return random.randint(0, 25)
+
+    def generate_request():
+        return request
+
+    def receive(msg=("ResponseHandler", (response, response_digest, request_number,)), from_=c):
+
+        if request_number in self.responseMap:
+            if response_digest in self.responseMap[request_number]:
+                self.responseMap[request_number][response_digest] += 1
+            else:
+                self.responseMap[request_number][response_digest] = 1
+        else:
+            self.responseMap[request_number] = {}
+            self.responseMap[request_number][response_digest] = 1
+
+        # If the request number of the response has not already been committed
+        if request_number not in self.committed_requests:
+
+            if self.responseMap[request_number][response_digest] >= (self.faulty_replicas + 1):
+                self.committed_requests.add(request_number)
+                self.request_number += 1
+                if self.request_number <= self.number_of requests:
+                    # TODO: Send next request to all replicas
+                    time.sleep(self.delay)
+                    self.delay = set_initial_delay()
+                    request = str(self)+"-"+str(request_number)
+                    send(('Request', request,),
+                         to=self.replicaPublicKeyMap.keys())

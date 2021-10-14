@@ -1,0 +1,82 @@
+# type: ignore
+from typing import DefaultDict
+# from ledger_stateLedgerState,  imprt LedgerState
+from block_tree import PendingBlockTree
+from ledger_state import LedgerState
+
+
+# class Ledger:
+
+#     def __init__(self):
+
+#         self.ledgerFile = None
+#         self.committed_ledger_states = DefaultDict()
+#         self.pending_ledger_states = DefaultDict()
+#         self.block_to_state_map = DefaultDict()
+
+#     def speculate(self, prev_block_id, block_id, txns):
+#         prev_state_id = self.block_to_state_map.get(prev_block_id, None)
+#         state_id = hash(prev_state_id, txns)
+#         self.pending_ledger_states[block_id] = LedgerState(
+#             prev_block_id, block_id, txns, state_id)
+#         self.block_to_state_map[block_id] = state_id
+
+#     def pending_state(self, block_id):
+#         return self.pending_ledger_states.get(block_id, None)
+
+
+class Ledger:
+
+    def __init__(self):
+        self.ledger_file = None
+        self.pending_ledger_tree = LedgerTree()
+        self.committed_ledger_tree = LedgerTree()
+
+    def speculate(self, prev_block_id, block_id, txns):
+
+        prev_state_id = self.pending_ledger_tree[prev_block_id].state_id
+        new_state_id = hash(prev_state_id, txns)
+        new_state = LedgerState(
+            new_state_id, block_id, prev_block_id, txns)
+        self.pending_ledger_tree.add(block_id, new_state)
+
+    def pending_state(self, block_id):
+        return self.pending_ledger_tree.get(block_id, None)
+
+    def commit(self, block_id):
+        to_be_committed_state = self.pending_state(block_id)
+        if not to_be_committed_state:
+            return
+        try:
+            to_be_committed_state.is_committed = True
+            self.committed_ledger_tree.add(block_id, to_be_committed_state)
+            del self.pending_ledger_tree[block_id]
+            # TODO: Prune logic remaining
+        except:
+            print("Could not commit ledger state for block id: ", block_id)
+
+    def committed_block(self, block_id):
+        return self.committed_ledger_tree.get(block_id, None)
+
+
+class LedgerTree:
+
+    def __init__(self):
+        self.root = None
+        self.currentLeaf = None
+        self.block_id_to_state = {}
+
+    def add(self, block_id, state):
+        # Add the mapping of block_id to state_id in the Ledger Tree Map
+        self.block_id_to_state[block_id] = state
+        # Update the current leaf pointer to point to the newly formed state
+        self.currentLeaf = state
+
+    def __fork_and_add(self, block_id, state_id):
+
+        # abandon current_leaf
+        self.block_id_to_state.pop(self.current_leaf)
+        # Add the mapping of block_id to state_id in the Ledger Tree Map
+        self.block_id_to_state[block_id] = state_id
+        # assign self.current_leaf to this state_id
+        self.current_leaf = state_id
