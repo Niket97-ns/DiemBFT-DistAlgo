@@ -9,7 +9,7 @@ class Block:
         self.qc = highest_qc
         self.payload = txns
         pprint(vars(self))
-
+        self.id = author
         # self.id = hash(author, round, payload, qc.vote_info.id, qc.signature)
 
     def get_parent_id(self):

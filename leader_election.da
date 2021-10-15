@@ -18,8 +18,10 @@ class LeaderElection:
         qc_round = qc.vote_info.round
         current_round = pace_maker.PaceMaker.current_round
         if extended_round + 1 == qc_round and qc_round + 1 == current_round:
-            self.reputation_leaders[current_round +
-                                    1] = election_reputation_leader(qc)
+            print("New leader to be elected")
+            print(extended_round, qc_round, current_round)
+            # self.reputation_leaders[current_round +
+            #                         1] = election_reputation_leader(qc)
 
     def get_round_robin_leader(self, curr_round):
         # Round robin leader (2 rounds per leader)

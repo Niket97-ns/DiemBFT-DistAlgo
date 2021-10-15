@@ -29,7 +29,7 @@ class Client(process):
         time.sleep(self.delay)
         self.delay = set_initial_delay()
         request = str(self)+"-"+str(request_number)
-        output("Client ", self, " will send ", request)
+        # output("Client ", self, " will send ", request)
         # TODO: use another variable to store validators
         send(('Request', request), to=self.replicaPublicKeyMap.keys())
         # await(some(received("ResponseHandler", (response, response_digest, request_number,))))

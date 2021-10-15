@@ -61,19 +61,27 @@ class BlockTree:
         self.pending_votes = defaultdict()
 
     def process_qc(self, qc):
-        if qc.ledger_commit_info.commit_state_id != None:
+
+        # print("Initial ", self.high_commit_qc.vote_info.round,
+        #       self.high_qc.vote_info.round)
+
+        if qc.ledger_commit_info.commit_state_id != 0:
             Ledger.commit(qc.vote_info.parent_id)
             # parent becomes new root we remove the committed message from the ppending tree
-            self.pending_block_tree.prune(qc.vote_info.parent_id)
+            # TODO: Prune
+            # self.pending_block_tree.prune(qc.vote_info.parent_id)
 
             # still a bit doubtful
             if qc.vote_info.round > self.high_commit_qc.vote_info.round:
                 self.high_commit_qc = qc
-        if qc.vote_info.round > self.high_qc.vote_info_round:
+
+        # print("@@@@@", qc.vote_info.round, self.high_qc.vote_info.round)
+        if qc.vote_info.round > self.high_qc.vote_info.round:
             self.high_qc = qc
 
     def execute_and_insert(self, block):
         Ledger.speculate(block.qc.vote_info.id, block.id, block.payload)
+        print("Ended speculation")
         self.pending_block_tree.add(block)
 
     def process_vote(self, v):
@@ -89,5 +97,5 @@ class BlockTree:
             return qc
 
     def generate_block(self, author, curr_round, txns):
-        print("Generating block")
+        # print("Generating block")
         return Block(author, curr_round, txns, self.high_qc)

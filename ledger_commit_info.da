@@ -1,5 +1,6 @@
 # type: ignore
 class LedgerCommitInfo:
+    # TODO: take care of commit_state_id default value
     def __init__(self, vote_info, commit_state_id=0) -> None:
         self.commit_state_id = commit_state_id
         self.vote_info_hash = hash(vote_info)

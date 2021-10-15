@@ -2,10 +2,8 @@
 import nacl.utils
 from nacl.signing import SigningKey
 from nacl.signing import VerifyKey
-
+from pprint import pprint
 from block_tree import BlockTree
-from leader_election import LeaderElection
-from pacemaker import Pacemaker
 from safety import Safety
 from mempool import Mempool
 from tc import TC
@@ -14,18 +12,31 @@ from ledger_commit_info import LedgerCommitInfo
 from qc import QC
 
 
+class ProposalMsg:
+    def __init__(self, block, last_tc, high_commit_qc):
+        self.block = block
+        self.last_tc = last_tc
+        self.high_commit_qc = high_commit_qc
+
+
 class Replica(process):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t=25):
 
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
-        self.leaderElection = LeaderElection(list(replicaPublicKeyMap.keys()))
+
+        # ---------- start leaderElection -------- #
+        self.validators = list(replicaPublicKeyMap.keys())
+        # ---------- end leaderElection -------- #
 
         self.replicaPublicKeyMap.pop(self)
         self.commit_cache = {}
         self.f = f
+        self.last_tc = TC(0, [0]*(2*(self.f)+1), [None]*(2*(self.f)+1))
+
         self.t = t
+
         # ------------- vote info ---------------- #
         # ------------- default values --------------- #
         self.vote_info = VoteInfo()
@@ -43,12 +54,17 @@ class Replica(process):
 
         self.blockTree = BlockTree(self.high_qc, self.high_commit_qc, self.f)
 
-        # TODO: Remove self.round
-        self.curr_round = 1
+        # -------------- start pacemaker attribute initialization ------------ #
+
+        self.pacemaker_current_round = 1
+        self.pacemaker_pending_timeouts = {}
+        self.pacemaker_last_round_tc = 1
+
+        # -------------- end pacemaker attribute initialization -------------- #
+
         # self.paceMaker = Pacemaker()
         # self.safety = Safety()
         self.mempool = Mempool()
-        self.last_tc = TC(0, [0]*(2*(self.f)+1), [None]*(2*(self.f)+1))
 
     # def receive(msg=("PrepareHandler1",   ), from_=c):
     #     print("reached PreareHandler1")
@@ -74,29 +90,95 @@ class Replica(process):
 
     #     send(("Prepared2",), to=c)
 
-    def receive(msg=("process_certificate_qc", qc), from_=c):
-        self.blockTree.process_qc(qc)
-        self.leaderElection.update_leaders(qc)
-        self.paceMaker.advance_round(qc.vote_info.round)
+    # def receive(msg=("process_certificate_qc", qc), from_=c):
+    #     print("*****************", qc)
+    #     self.blockTree.process_qc(qc)
+    #     self.leaderElection.update_leaders(qc)
+    #     self.paceMaker.advance_round(qc.vote_info.round)
+
+    #################################################################
+    ############## Start Pacemaker Function Definitions #############
+
+    def Pacemaker_stop_timer(round):
+        pass
+
+    def Pacemaker_get_round_timer(round):
+
+        # TODO: need to understand this formula for round_timer
+        # return round_time(round)
+        pass
+        # return self.round_time
+
+    def Pacemaker_start_timer(new_round):
+        self.stop_timer(self.pacemaker_current_round)
+        self.pacemaker_current_round = new_round
+
+    def Pacemaker_advance_round_tc(tc):
+        if tc == None or tc.round < self.pacemaker_current_round:
+            return False
+
+        self.pacemaker_last_round_tc = tc
+        self.start_timer(tc.round + 1)
+        return True
+
+    def Pacemaker_advance_round_qc(qc):
+        if qc.vote_info.round < self.pacemaker_current_round:
+            return False
+
+        self.pacemaker_last_round_tc = None
+        self.start_timer(qc.vote_info.round + 1)
+        # return True
+
+    #################################################################
+    ############## End Pacemaker Function Definitions #############
+
+    #################################################################
+    ############## Start LeaderElection Function Definitions #############
+
+    def Leader_update_leaders(qc):
+        extended_round = qc.vote_info.parent_round
+        qc_round = qc.vote_info.round
+        pacemaker_current_round = self.pacemaker_current_round
+        if extended_round + 1 == qc_round and qc_round + 1 == pacemaker_current_round:
+            pass
+            # TODO:
+            # self.reputation_leaders[pacemaker_current_round +
+            #                         1] = election_reputation_leader(qc)
+
+    def Leader_get_round_robin_leader(curr_round):
+        # Round robin leader (2 rounds per leader)
+        idx = (curr_round//2) % len(self.validators)
+        return self.validators[idx]
+
+    def Leader_get_leader(round):
+        # TODO: IDK
+
+        # if round in self.reputation_leaders:
+        #     return self.reputation_leaders[round]
+        return self.Leader_get_round_robin_leader(round)
+
+    #################################################################
+    ############## End LeaderElection Function Definitions #############
 
     def process_certificate_qc(qc):
         self.blockTree.process_qc(qc)
-        self.leaderElection.update_leaders(qc)
-        self.paceMaker.advance_round(qc.vote_info.round)
+        self.Leader_update_leaders(qc)
+        # TODO: Check paper : Code invalid
+        self.Pacemaker_advance_round_qc(qc)
 
     def process_new_round_event(last_tc):
         # Not sure what they are trying to check
         # TODO: Check code, change to get_leader and self.pacemaker.curr_round
-        if self == self.leaderElection.get_round_robin_leader(self.curr_round):
+        if self == self.Leader_get_round_robin_leader(self.pacemaker_current_round):
             # output(" -----------  ", self, " am the leader.")
             # Create proposal Look into it again
             # print(self.mempool.get_transactions())
             b = self.blockTree.generate_block(self,
-                                              self.curr_round, self.mempool.get_transactions())
+                                              self.pacemaker_current_round, self.mempool.get_transactions())
 
             # TODO: Handle this
-            # send(("process_proposal_message", b),
-            #      to=self.replicaPublicKeyMap.keys())
+            send(("process_proposal_message", ProposalMsg(b, self.last_tc, self.blockTree.high_commit_qc)),
+                 to=self.replicaPublicKeyMap.keys())
 
     # I am confused if this is the same vote handler
     # because the sequence of these proceders in the papaer is different
@@ -107,24 +189,28 @@ class Replica(process):
             self.process_certificate_qc(qc)
             self.process_new_round_event(None)
 
-    def receive(msg=("process_proposal_message", P)):
+    def receive(msg=("process_proposal_message", P), from_=r):
+        # output("inside receive handler")
+        # pprint(vars(P))
         self.process_certificate_qc(P.block.qc)
         self.process_certificate_qc(P.high_commit_qc)
-        self.paceMaker.advance_round_tc(P.last_round_qc)
-        round = self.paceMaker.current_round
 
+        self.Pacemaker_advance_round_tc(P.last_tc)
+        round = self.pacemaker_current_round
         # it should be round but name converntions was a bit weird
-        leader = self.leaderElection.get_leader(round)
-
+        leader = self.Leader_get_leader(round)
         # need to confirm the data type of leader variable
-        if P.block.round != round or P.sender != leader or P.block_author != leader:
+
+        if P.block.round != round or r != leader or P.block.author != leader:
             return None
 
-        self.blockTree.execute_and_insert(P)
-        vote_msg = self.safety.make_vote(P.block, P.last_round_tc)
+        ########################## TESTED TILL HERE ################
+        self.blockTree.execute_and_insert(P.block)
+
+        vote_msg = self.safety.make_vote(P.block, P.last_tc)
         if vote_msg != None:
             # need to find receive handler for this send
-            new_leader_name = self.leaderElection.get_leader(round + 1)
+            new_leader_name = self.Leader_get_leader(round + 1)
 
             # need to decide the message
             send(("process_vote_msg", P), to=new_leader_name)
@@ -132,22 +218,22 @@ class Replica(process):
     def receive(msg=("process_timeout_message", M), from_=c):
         self.process_certificate_qc(M.tmo_info.high_qc)
         self.process_certificate_qc(M.high_commit_qc)
-        self.paceMaker.advance_round_tc(M.last_round_tc)
-        tc = self.paceMaker.process_remote_timeout(M)
+        self.Pacemaker_advance_round_tc(M.last_round_tc)
+        tc = self.Pacemaker_process_remote_timeout(M)
         if tc != None:
-            self.paceMaker.advance_round(tc)
+            self.Pacemaker_advance_round(tc)
             self.process_new_round_event(tc)
 
     # receive handler for client requests
     def receive(msg=('Request', request), from_=c):
-        output("Received ", request, "from ", c)
+        # output("Received ", request, "from ", c)
         if request in self.commit_cache:
 
             # TODO:Send previous response to client
             return
         if self.mempool.isEmpty():
             self.mempool.addTxns(request)
-            if self.leaderElection.get_round_robin_leader(self.curr_round) == self:
+            if self.Leader_get_round_robin_leader(self.pacemaker_current_round) == self:
                 process_new_round_event(self.last_tc)
         else:
             self.mempool.addTxns(request)
@@ -158,6 +244,5 @@ class Replica(process):
         await(some(received(("process_proposal_message", M),)))
         await(some(received(("process_timeout_message", M),)))
         await(some(received(("Request", request),)))
-        print("here")
         if not self.mempool.isEmpty():
             output("Mempool not empty")
