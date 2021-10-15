@@ -1,8 +1,7 @@
 # type: ignore
 from block import Block
 from qc import QC
-import defaultdict
-# from block_tree_node import PendingBlockTree, BlockTreeNode
+from collections import defaultdict
 from ledger import Ledger
 
 
@@ -61,11 +60,11 @@ class BlockTree:
         # TODO: dictonary for now
         self.pending_votes = defaultdict()
 
-    def process_qc(self):
+    def process_qc(self, qc):
         if qc.ledger_commit_info.commit_state_id != None:
             Ledger.commit(qc.vote_info.parent_id)
             # parent becomes new root we remove the committed message from the ppending tree
-            pending_block_tree.prune(qc.vote_info.parent_id)
+            self.pending_block_tree.prune(qc.vote_info.parent_id)
 
             # still a bit doubtful
             if qc.vote_info.round > self.high_commit_qc.vote_info.round:
@@ -73,11 +72,11 @@ class BlockTree:
         if qc.vote_info.round > self.high_qc.vote_info_round:
             self.high_qc = qc
 
-    def execute_and_insert(block):
+    def execute_and_insert(self, block):
         Ledger.speculate(block.qc.vote_info.id, block.id, block.payload)
         self.pending_block_tree.add(block)
 
-    def process_votes(self):
+    def process_vote(self, v):
         self.process_qc(v.high_commit_qc)
         vote_idx = hash(v.ledger_commit_info)
         self.pending_votes[vote_idx] = self.pending_votes[vote_idx].add(
@@ -89,5 +88,6 @@ class BlockTree:
 
             return qc
 
-    def generate_block(self, txns, curr_round):
-        return Block(curr_round, txns, self.high_qc)
+    def generate_block(self, author, curr_round, txns):
+        print("Generating block")
+        return Block(author, curr_round, txns, self.high_qc)

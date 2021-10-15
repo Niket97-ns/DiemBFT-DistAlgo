@@ -1,14 +1,12 @@
 # type: ignore
 
 import vote_info as vi
-import ledger_coomit_info as lci
+import ledger_commit_info as lci
 import util
 import vote_msg as vm
 import block_tree as bt
 
-import safet
-
-s = Safety(self,)
+# import safet
 
 
 class Safety():

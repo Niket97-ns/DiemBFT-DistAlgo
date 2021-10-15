@@ -1,22 +1,27 @@
 # type: ignore
-import queue
+# import queue
+
 
 class Mempool:
-    def __init__(self, maxSize = 0, txnsInBlock = 1) -> None:
-        self.q = queue.Queue(maxSize)
+    def __init__(self, maxSize=100, txnsInBlock=1) -> None:
+        self.q = []
+
         self.txnsInBlock = txnsInBlock
 
     def addTxns(self, newObj):
-        self.q.put(newObj)
+        self.q.append(newObj)
 
-    def getTxns(self):
-        txns = []
-        for i in range(self.txnsInBlock):
-            txns.append(self.q.get())
-        return txns
+    def get_transactions(self):
+        # txns = []
+
+        # for i in range(self.txnsInBlock):
+        #     txns.append(self.q[-1-i])
+        return self.q[-1]
 
     def isEmpty(self):
-        return self.q.empty()
+        return len(self.q) == 0
 
-    def isFull(self):
-        return self.q.full()
+    # def isFull(self):
+    #     return self.q.full()
+
+    # def printQueue(self):

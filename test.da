@@ -1,0 +1,20 @@
+# type: ignore
+import time
+
+
+class Test(process):
+    def setup():
+        self.queue = [1]
+
+    def run():
+        # --receive
+        output("in test ,", self)
+        if await (len(self.queue) != 0):
+            print("hello")
+            print(self.queue.pop())
+
+        time.sleep(5)
+        self.queue.append(5)
+        time.sleep(10)
+        self.queue.append(10)
+        output(self.queue)

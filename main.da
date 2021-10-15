@@ -4,12 +4,14 @@ import replica
 import client
 import nacl.utils
 from nacl.signing import SigningKey
+# from test import Test
 
 
 class DiemBFT(process):
     def setup(config):
         self.numberOfClients = config["numberOfClients"]
         self.numberOfReplicas = config["numberOfReplicas"]
+        self.numberOfFaulty = config["numberOfFaulty"]
 
     def generateKeys():
         sk = SigningKey.generate()
@@ -20,28 +22,29 @@ class DiemBFT(process):
         replicas = new(replica.Replica, num=self.numberOfReplicas)
         clients = new(client.Client, num=self.numberOfClients)
         replicaPublicKeyMap, clientPublicKeyMap = {}, {}
+
         privateKeyMap = {}
         for r in replicas:
             privateKeyMap[r], replicaPublicKeyMap[r] = generateKeys()
 
         for c in clients:
             privateKeyMap[c], clientPublicKeyMap[c] = generateKeys()
-
         for r in replicas:
-            setup(r, (privateKeyMap[r],
-                      clientPublicKeyMap, replicaPublicKeyMap,))
+            setup(r, (privateKeyMap[r], clientPublicKeyMap,
+                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 25,))
             start(r)
         for c in clients:
-            setup(c, (privateKeyMap[c],
-                      clientPublicKeyMap, replicaPublicKeyMap, ))
+            setup(c, (privateKeyMap[c], clientPublicKeyMap,
+                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 4, 2, 25,))
             start(c)
 
 
 def main():
 
     config(clock="Lamport")
-    configs = [{"numberOfClients": 2, "numberOfReplicas": 5}]
-
+    configs = [{"numberOfClients": 2,
+                "numberOfReplicas": 7, "numberOfFaulty": 1}]
+    output("in config")
     for config in configs:
         p = new(DiemBFT)
         setup(p, (config,))

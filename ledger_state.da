@@ -1,5 +1,4 @@
 # type: ignore
-from ledger import LedgerTree
 
 
 class LedgerState:

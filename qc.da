@@ -1,13 +1,18 @@
 # type: ignore
 from vote_info import VoteInfo
+from ledger_commit_info import LedgerCommitInfo
+import util
+
 
 class QC:
     # just create a standard qc with round zero
-    def __init__(self, vote_info = VoteInfo(), signatures = None, ledger_commit_info = None, author = None) -> None:
+    def __init__(self, vote_info=None, signatures=None, ledger_commit_info=None, author=None) -> None:
         self.vote_info = vote_info
-
-        # Maybe
         self.ledger_commit_info = ledger_commit_info
-        self.signature = signatures                        # Object not yet created
-        # self.author = author
+        self.signatures = signatures                        # Object not yet created
+        self.author = author
+        if self.author == None:
+            self.author_signature = None
+        else:
+            self.author_signature = hash(self.author, self.signatures)
         # author and author signature remaining

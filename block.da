@@ -1,10 +1,15 @@
 # type: ignore
+from pprint import pprint
+
+
 class Block:
-    def __init__(self, author, current_round, txns, highest_qc = None) -> None:
+    def __init__(self, author, current_round, txns, highest_qc=None) -> None:
         self.author = author
         self.round = current_round
         self.qc = highest_qc
         self.payload = txns
+        pprint(vars(self))
+
         # self.id = hash(author, round, payload, qc.vote_info.id, qc.signature)
 
     def get_parent_id(self):
