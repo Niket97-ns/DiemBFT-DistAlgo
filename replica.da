@@ -204,7 +204,6 @@ class Replica(process):
         if P.block.round != round or r != leader or P.block.author != leader:
             return None
 
-        ########################## TESTED TILL HERE ################
         self.blockTree.execute_and_insert(P.block)
 
         vote_msg = self.safety.make_vote(P.block, P.last_tc)

@@ -1,3 +1,8 @@
+# type: ignore
+import nacl.encoding
+import nacl.hash
+
+
 def hash(x):
     return x
 
@@ -5,3 +10,20 @@ def hash(x):
 def sign(author, *args):
     s = "~".join(list(args))
     return author.privateKey.sign(str.encode(s))
+
+
+def createDigest(msg):
+    HASHER = nacl.hash.sha256
+    encoded_msg = str.encode(msg)
+    digest = HASHER(encoded_msg, encoder=nacl.encoding.HexEncoder)
+    message_to_be_sent = nacl.encoding.HexEncoder.encode(encoded_msg)
+    return digest, message_to_be_sent
+
+
+def checkDigest(receivedMsg, digest):
+    HASHER = nacl.hash.sha256
+    received_msg = nacl.encoding.HexEncoder.decode(receivedMsg)
+    if digest == HASHER(received_msg, encoder=nacl.encoding.HexEncoder):
+        return True
+    else:
+        return False
