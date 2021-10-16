@@ -21,7 +21,7 @@ class Client(process):
         # Initial delay after which client sends request
         self.delay = set_initial_delay()
         self.responseMap = {}
-        self.request_number = 1     # Initial request number
+        self.request_number = 1    # Initial request number
         # self.sequence_number = 1    # Sequence number to uniquely identify request
         self.committed_requests = set()  # Check for requests already committed
 
@@ -33,12 +33,13 @@ class Client(process):
             request = str(self)+"-"+str(request_number)
             # output("Client ", self, " will send ", request)
             # TODO: use another variable to store validators
+            output("Sending request ",request)
             send(('Request', request), to=self.replicaPublicKeyMap.keys())
             self.request_number += 1
             # await(some(received("ResponseHandler", (response, response_digest, request_number,))))
 
     def set_initial_delay():
-        return random.randint(0, 1)
+        return random.randint(0,1)//100
 
     def generate_request():
         return request

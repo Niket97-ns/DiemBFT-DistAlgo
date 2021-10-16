@@ -6,11 +6,12 @@ import util
 
 class QC:
     # just create a standard qc with round zero
-    def __init__(self, vote_info=None, signatures=None, ledger_commit_info=None, author=None) -> None:
+    def __init__(self, vote_info=None, signatures=None, ledger_commit_info=None, author=None, signers=None) -> None:
         self.vote_info = vote_info
         self.ledger_commit_info = ledger_commit_info
         self.signatures = signatures                        # Object not yet created
         self.author = author
+        self.signers = signers
         if self.author == None:
             self.author_signature = None
         else:

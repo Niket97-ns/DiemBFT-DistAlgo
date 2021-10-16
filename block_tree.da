@@ -15,6 +15,12 @@ class PendingBlockTree:
         self.root = None
         self.current_leaf = None
 
+    def get_block(self, block_id):
+        if block_id not in self.id_to_block:
+            return None
+        else:
+            return self.id_to_block[block_id]
+
     def __fork_and_add(self, block):
         # abandon current_leaf
         self.id_to_block.pop(self.current_leaf)
@@ -59,11 +65,14 @@ class BlockTree:
         self.f = f
         # TODO: need to create a tree structure somehow
         self.pending_block_tree = PendingBlockTree()
+       
 
         # TODO: dictonary for now
         self.pending_votes = {}
         self.ledger = ledger
         self.author = author
+
+        self.pending_signers = {}
 
     def process_qc(self, qc):
 
@@ -88,16 +97,18 @@ class BlockTree:
         self.pending_block_tree.add(block)
 
     def process_vote(self, v):
-        print(self.author, " received vote from ", v.author)
         self.process_qc(v.high_commit_qc)
         # print(vars(v.ledger_commit_info))
         vote_idx = createDigest(createConcatString(v.ledger_commit_info))[0]
 
         if vote_idx not in self.pending_votes:
             self.pending_votes[vote_idx] = set()
+            self.pending_signers[vote_idx] = set()
+            self.pending_signers[vote_idx].add(v.author)
             self.pending_votes[vote_idx].add(v.signature)
         else:
             self.pending_votes[vote_idx].add(v.signature)
+            self.pending_signers[vote_idx].add(v.author)
         # print(vars(self.pending_votes))
         # print(self.pending_votes)
         if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:  # Quorum formed
@@ -109,7 +120,8 @@ class BlockTree:
             qc = QC(v.vote_info,
                     self.pending_votes[vote_idx],
                     v.ledger_commit_info,
-                    self.author
+                    self.author,
+                    self.pending_signers[vote_idx]
                     )
             return qc
         return None
