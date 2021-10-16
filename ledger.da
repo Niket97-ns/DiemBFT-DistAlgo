@@ -2,6 +2,7 @@
 
 # from block_tree import PendingBlockTree
 from ledger_state import LedgerState
+from util import createConcatString, createDigest
 
 
 class LedgerTree:
@@ -26,33 +27,68 @@ class LedgerTree:
         # assign self.current_leaf to this state_id
         self.current_leaf = state_id
 
+    def get(self, block_id):
+        return self.block_id_to_state.get(block_id, None)
+
+    def remove(self, block_id):
+        del self.block_id_to_state[block_id]
+
 
 class Ledger:
 
-    def __init__(self):
-        self.ledger_file = None
+    def __init__(self, author, mempool):
+        self.mempool = mempool
+        self.author = author
+        self.fileName = str(self.author)+".txt"
+        # self.ledger_file = open(self.fileName, "w+")
         self.pending_ledger_tree = LedgerTree()
         self.committed_ledger_tree = LedgerTree()
 
     def speculate(self, prev_block_id, block_id, txns):
+        # For all blocks except first
+        if prev_block_id in self.pending_ledger_tree.block_id_to_state:
+            prev_state_id = self.pending_ledger_tree.block_id_to_state[prev_block_id].state_id
 
-        prev_state_id = self.pending_ledger_tree[prev_block_id].state_id
-        new_state_id = hash(prev_state_id, txns)
+            # create hash of state id considering prev block
+            new_state_id = createDigest(
+                createConcatString(prev_state_id, txns))[0]
+
+        # for 1st blocks state creation
+        else:
+            # create hash of state id not considering prev block
+            new_state_id = createDigest(createConcatString(txns))[0]
+
         new_state = LedgerState(
             new_state_id, block_id, prev_block_id, txns)
         self.pending_ledger_tree.add(block_id, new_state)
 
     def pending_state(self, block_id):
-        return self.pending_ledger_tree.get(block_id, None)
+        if self.pending_ledger_tree.get(block_id) == None:
+            return None
+        else:
+            return self.pending_ledger_tree.get(block_id).state_id
+
+    def get_pending_state(self, block_id):
+        if self.pending_ledger_tree.get(block_id) == None:
+            return None
+        else:
+            return self.pending_ledger_tree.get(block_id)
 
     def commit(self, block_id):
-        to_be_committed_state = self.pending_state(block_id)
+
+        to_be_committed_state = self.get_pending_state(block_id)
         if not to_be_committed_state:
             return
         try:
             to_be_committed_state.is_committed = True
             self.committed_ledger_tree.add(block_id, to_be_committed_state)
-            del self.pending_ledger_tree[block_id]
+            ledgerFile = open(self.fileName, "a")
+            ledgerFile.write("\n" + to_be_committed_state.txns)
+            ledgerFile.close()
+
+            self.mempool.make_transaction_committed(to_be_committed_state.txns)
+
+            self.pending_ledger_tree.remove(block_id)
             # TODO: Prune logic remaining
         except:
             print("Could not commit ledger state for block id: ", block_id)

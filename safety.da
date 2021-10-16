@@ -1,9 +1,9 @@
 # type: ignore
 
 import vote_info as vi
-import ledger_commit_info as lci
-import util
-import vote_msg as vm
+from ledger_commit_info import LedgerCommitInfo
+from util import valid_signatures, createDigest, createConcatString
+from vote_msg import VoteMsg
 import block_tree as bt
 
 # import safet
@@ -11,10 +11,11 @@ import block_tree as bt
 
 class Safety():
 
-    def __init__(self, author, private_key, public_keys, highest_vote_round=0, highest_qc_round=0):
+    def __init__(self, author, ledger, blockTree, private_key, public_keys, highest_vote_round=0, highest_qc_round=0):
 
         self._author = author
-
+        self.ledger = ledger
+        self.blockTree = blockTree
         # private key of replica using the safety object.
         self._private_key = private_key
         self._public_keys = public_keys
@@ -56,8 +57,8 @@ class Safety():
 
     def __commit_state_id_candidate(self, block_round, qc):
         # Find the committed id in case a qc is formed in a vote round
-        if self.__consecutive(block_round, qc.vote_info_round):
-            # return Ledger.pending_state(qc.id)
+        if self.__consecutive(block_round, qc.vote_info.round):
+            return (self.ledger.pending_state(qc.vote_info.id))
             pass
         else:
             return None
@@ -73,16 +74,16 @@ class Safety():
             self.__increase_highest_vote_round(b.round)
 
             # VoteInfo carries the potential QC info with ids and rounds of the parent QC
-
             # TODO: Ledger object creation
             vote_info = vi.VoteInfo(
-                b.id, b.round, b.qc.vote_info.id, qc_round, Ledger.pending_state(b.id))
-
+                b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id))
             # TODO:
-            ledger_commit_info = lci.LedgerCommitInfo(
-                self.__commit_state_id_candidate(b.round, b.qc), util.hash(vote_info))
+            digest_of_vote_info = createDigest(
+                createConcatString(b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id)))[0]
 
-            return vm.VoteMsg(vote_info, ledger_commit_info, bt.high_commit_qc)
+            ledger_commit_info = LedgerCommitInfo(
+                digest_of_vote_info, self.__commit_state_id_candidate(b.round, b.qc))
+            return VoteMsg(self._author, vote_info, ledger_commit_info, self.blockTree.high_commit_qc, self._private_key)
 
         return None
 

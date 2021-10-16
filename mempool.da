@@ -4,22 +4,39 @@
 
 class Mempool:
     def __init__(self, maxSize=100, txnsInBlock=1) -> None:
-        self.q = []
+        self.q = {}
 
         self.txnsInBlock = txnsInBlock
 
-    def addTxns(self, newObj):
-        self.q.append(newObj)
+    def addTxns(self, txn):
+        # self.q.append(newObj)
+        self.q[txn] = "REQUESTED"
 
     def get_transactions(self):
-        # txns = []
-
-        # for i in range(self.txnsInBlock):
-        #     txns.append(self.q[-1-i])
-        return self.q[-1]
+        if self.isEmpty():
+            return None
+        else:
+            return self.q.pop()
 
     def isEmpty(self):
         return len(self.q) == 0
+
+    def make_transaction_committed(self, txn):
+        self.q[txn] = "COMMITTED"
+        return
+
+    def make_transaction_pending(self, txn):
+        self.q[txn] = "PENDING"
+        return
+
+    def get_requested_transaction(self):
+        if self.isEmpty():
+            return None
+        for key in self.q.keys():
+            if self.q[key] == "REQUESTED":
+                self.q[key] = "PENDING"
+                return key
+        return None
 
     # def isFull(self):
     #     return self.q.full()

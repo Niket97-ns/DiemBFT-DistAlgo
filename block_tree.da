@@ -3,6 +3,9 @@ from block import Block
 from qc import QC
 from collections import defaultdict
 from ledger import Ledger
+from pprint import pprint
+
+from util import createConcatString, createDigest
 
 
 class PendingBlockTree:
@@ -50,7 +53,7 @@ class PendingBlockTree:
 
 class BlockTree:
 
-    def __init__(self, high_qc, high_commit_qc, f) -> None:
+    def __init__(self, author, high_qc, high_commit_qc, f, ledger) -> None:
         self.high_qc = high_qc
         self.high_commit_qc = high_commit_qc
         self.f = f
@@ -58,15 +61,16 @@ class BlockTree:
         self.pending_block_tree = PendingBlockTree()
 
         # TODO: dictonary for now
-        self.pending_votes = defaultdict()
+        self.pending_votes = {}
+        self.ledger = ledger
+        self.author = author
 
     def process_qc(self, qc):
 
         # print("Initial ", self.high_commit_qc.vote_info.round,
         #       self.high_qc.vote_info.round)
-
-        if qc.ledger_commit_info.commit_state_id != 0:
-            Ledger.commit(qc.vote_info.parent_id)
+        if qc.ledger_commit_info.commit_state_id != 0 and qc.ledger_commit_info.commit_state_id != None:
+            self.ledger.commit(qc.vote_info.parent_id)
             # parent becomes new root we remove the committed message from the ppending tree
             # TODO: Prune
             # self.pending_block_tree.prune(qc.vote_info.parent_id)
@@ -80,21 +84,35 @@ class BlockTree:
             self.high_qc = qc
 
     def execute_and_insert(self, block):
-        Ledger.speculate(block.qc.vote_info.id, block.id, block.payload)
-        print("Ended speculation")
+        self.ledger.speculate(block.qc.vote_info.id, block.id, block.payload)
         self.pending_block_tree.add(block)
 
     def process_vote(self, v):
+        print(self.author, " received vote from ", v.author)
         self.process_qc(v.high_commit_qc)
-        vote_idx = hash(v.ledger_commit_info)
-        self.pending_votes[vote_idx] = self.pending_votes[vote_idx].add(
-            v.signature)
-        if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:
+        # print(vars(v.ledger_commit_info))
+        vote_idx = createDigest(createConcatString(v.ledger_commit_info))[0]
 
+        if vote_idx not in self.pending_votes:
+            self.pending_votes[vote_idx] = set()
+            self.pending_votes[vote_idx].add(v.signature)
+        else:
+            self.pending_votes[vote_idx].add(v.signature)
+        # print(vars(self.pending_votes))
+        # print(self.pending_votes)
+        if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:  # Quorum formed
             # Alert NOT sure about exe_state_id
-            qc = QC(v.vote_info, v.vote_info.exec_state_id)
+            # print(self.pending_votes[vote_idx])
+            # qc = QC(v.vote_info, v.vote_info.exec_state_id)
 
+            # TODO: Adding signature of author in qc
+            qc = QC(v.vote_info,
+                    self.pending_votes[vote_idx],
+                    v.ledger_commit_info,
+                    self.author
+                    )
             return qc
+        return None
 
     def generate_block(self, author, curr_round, txns):
         # print("Generating block")

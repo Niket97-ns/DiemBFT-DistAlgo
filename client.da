@@ -26,16 +26,19 @@ class Client(process):
         self.committed_requests = set()  # Check for requests already committed
 
     def run():
-        time.sleep(self.delay)
-        self.delay = set_initial_delay()
-        request = str(self)+"-"+str(request_number)
-        # output("Client ", self, " will send ", request)
-        # TODO: use another variable to store validators
-        send(('Request', request), to=self.replicaPublicKeyMap.keys())
-        # await(some(received("ResponseHandler", (response, response_digest, request_number,))))
+
+        while self.request_number <= self.number_of_requests:
+            time.sleep(self.delay)
+            self.delay = set_initial_delay()
+            request = str(self)+"-"+str(request_number)
+            # output("Client ", self, " will send ", request)
+            # TODO: use another variable to store validators
+            send(('Request', request), to=self.replicaPublicKeyMap.keys())
+            self.request_number += 1
+            # await(some(received("ResponseHandler", (response, response_digest, request_number,))))
 
     def set_initial_delay():
-        return random.randint(0, 25)
+        return random.randint(0, 1)
 
     def generate_request():
         return request

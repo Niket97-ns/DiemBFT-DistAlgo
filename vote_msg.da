@@ -1,7 +1,12 @@
 # type: ignore
+from util import sign
+
+
 class VoteMsg:
-    def __init__(self, vote_info, ledger_commit_info, high_commit_qc, ) -> None:
+    def __init__(self, author, vote_info, ledger_commit_info, high_commit_qc, private_key) -> None:
+        self.author = author
         self.vote_info = vote_info
         self.ledger_commit_info = ledger_commit_info
         self.high_commit_qc = high_commit_qc
+        self.signature = sign(private_key, self.ledger_commit_info)
         # sender and signature on ledger_commit_info remaining

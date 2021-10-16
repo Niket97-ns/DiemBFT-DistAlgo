@@ -1,15 +1,22 @@
 # type: ignore
 from pprint import pprint
+from util import createConcatString, createDigest
 
 
 class Block:
+    def generate_block_id(self):
+        s = createConcatString(
+            self.author, self.round, self.payload, self.qc.vote_info.id, self.qc.signatures)
+        (digest, msg) = createDigest(s)
+        return digest
+
     def __init__(self, author, current_round, txns, highest_qc=None) -> None:
         self.author = author
         self.round = current_round
         self.qc = highest_qc
         self.payload = txns
-        pprint(vars(self))
-        self.id = author
+
+        self.id = self.generate_block_id()
         # self.id = hash(author, round, payload, qc.vote_info.id, qc.signature)
 
     def get_parent_id(self):

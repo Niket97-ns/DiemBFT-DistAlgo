@@ -14,5 +14,6 @@ class QC:
         if self.author == None:
             self.author_signature = None
         else:
-            self.author_signature = hash(self.author, self.signatures)
+            # TODO:
+            self.author_signature = 1
         # author and author signature remaining

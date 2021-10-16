@@ -1,6 +1,7 @@
 # type: ignore
 import nacl.encoding
 import nacl.hash
+import pickle
 
 
 def hash(x):
@@ -8,15 +9,22 @@ def hash(x):
 
 
 def sign(author, *args):
+
     s = "~".join(list(args))
     return author.privateKey.sign(str.encode(s))
 
 
+def sign(key, *args):
+    a = tuple(args)
+    # s = " ".join(str(e) for e in a)
+    return key.sign(pickle.dumps(a))
+
+
 def createDigest(msg):
     HASHER = nacl.hash.sha256
-    encoded_msg = str.encode(msg)
-    digest = HASHER(encoded_msg, encoder=nacl.encoding.HexEncoder)
-    message_to_be_sent = nacl.encoding.HexEncoder.encode(encoded_msg)
+    # encoded_msg = str.encode(msg)
+    digest = HASHER(msg, encoder=nacl.encoding.HexEncoder)
+    message_to_be_sent = nacl.encoding.HexEncoder.encode(msg)
     return digest, message_to_be_sent
 
 
@@ -27,3 +35,12 @@ def checkDigest(receivedMsg, digest):
         return True
     else:
         return False
+
+
+def createConcatString(*args):
+    a = tuple(args)
+    return pickle.dumps(a)
+
+
+def valid_signatures(block, last_tc):
+    return True
