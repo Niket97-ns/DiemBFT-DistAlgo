@@ -30,6 +30,9 @@ class Replica(process):
         self.leader = None
         # ---------- start leaderElection -------- #
         self.validators = list(replicaPublicKeyMap.keys())
+        self.window_size = 4
+        self.exclude_size = 2
+        self.reputation_leaders = {}
         # ---------- end leaderElection -------- #
 
         # self.replicaPublicKeyMap.pop(self)
@@ -146,6 +149,23 @@ class Replica(process):
 
     #################################################################
     ############## Start LeaderElection Function Definitions #############
+
+    def Leader_elect_reputation_leader(qc):
+        active_validators = set()
+        last_authors = set()
+        current_qc = qc
+        i = 0
+        while i < self.window_size or len(last_authors) < self.exclude_size:
+            # current_block = self.ledger.committed_ledger_tree[]
+            if current_qc.vote_info.parent_id not in self.ledger.committed_ledger_tree:
+                break
+            else:
+                current_block = self.ledger.committed_ledger_tree[current_qc.vote_info.parent_id]
+                block_author = current_block.author
+                if i < self.window_size:
+                    # TODO: add signers
+                    active_validators.add()
+            i += 1
 
     def Leader_get_round_robin_leader(curr_round):
         # Round robin leader (2 rounds per leader)
