@@ -127,6 +127,12 @@ class Replica(process):
     def Pacemaker_start_timer(new_round):
         self.Pacemaker_stop_timer(self.pacemaker_current_round)
         self.pacemaker_current_round = new_round
+        if await((self == self.Leader_get_leader(self.pacemaker_current_round))):
+            process_new_round_event(self.last_tc)
+        elif await(some(received(('process_proposal_message', P)), has=P.block.round == self.pacemaker_current_round)):
+            pass
+        elif timeout(4):
+            output("timed out")
 
     def Pacemaker_advance_round_tc(tc):
         if tc == None or tc.round < self.pacemaker_current_round:
@@ -274,7 +280,7 @@ class Replica(process):
     # receive handler for client requests
     def receive(msg=('Request', request), from_=c):
         # output("Received ", request, "from ", c)
-        output("Request ", request, " from ", c)
+        # output("Request ", request, " from ", c)
         if request in self.commit_cache:
 
             # TODO:Send previous response to client
@@ -294,9 +300,15 @@ class Replica(process):
         # await(some(received(("process_proposal_message", M),)))
         # await(some(received(("process_timeout_message", M),)))
         # await(some(received(("Request", request),)))
-        if self == self.Leader_get_round_robin_leader(self.pacemaker_current_round):
-            await(not self.mempool.isEmpty())
-            process_new_round_event(self.last_tc)
-            await(False)
-        else:
-            await(self.pacemaker_current_round > 20)
+
+        # ## working##
+        # if self == self.Leader_get_round_robin_leader(self.pacemaker_current_round):
+        #     await(not self.mempool.isEmpty())
+        #     process_new_round_event(self.last_tc)
+        #     await(False)
+        # else:
+        # await(self.pacemaker_current_round > 200)
+        ###########
+        await(not self.mempool.isEmpty())
+        Pacemaker_start_timer(self.pacemaker_current_round)
+        await(False)
