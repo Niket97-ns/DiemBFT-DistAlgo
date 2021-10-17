@@ -74,6 +74,10 @@ class Replica(process):
             self, self.ledger, self.blockTree, self.privateKey, self.replicaPublicKeyMap)
         # -------------- end safety module initialization --------------- #
 
+        # self.start = time.time()
+        # self.max_time = -1
+        self.one_round_time_timeout = 4 * 0.07
+
     #################################################################
     ############## Fault Injection part #############
 
@@ -118,7 +122,6 @@ class Replica(process):
 
     def Pacemaker_process_remote_timeout(tmo):
         tmo_info = tmo.tmo_info
-        # output("))))))", tmo_info.round)
 
         if tmo_info.round < self.pacemaker_current_round:
             return None
@@ -289,6 +292,8 @@ class Replica(process):
                 signed_proposal = self.safety.sign(new_proposal)
                 send(("process_proposal_message", signed_proposal),
                      to=self.validators)
+                    
+                
 
     # I am confused if this is the same vote handler
     # because the sequence of these proceders in the papaer is different
@@ -306,9 +311,14 @@ class Replica(process):
 
             if qc != None:
                 self.process_certificate_qc(qc)
-                self.process_new_round_event(None)
+                # self.max_time = max(self.max_time, time.time() - self.start)
+                # print("@@@@@@@@@@@@@@@@@ ",self.max_time," @@@@@@@@@@@@@@@@")
+                # self.start = time.time()
+                self.process_new_round_event(None)         
         except:
             pass
+    
+        
 
     def receive(msg=("process_proposal_message", P), from_=r):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
@@ -324,7 +334,6 @@ class Replica(process):
             # it should be round but name converntions was a bit weird
             temp_leader = self.Leader_get_leader(round)
             # need to confirm the data type of leader variable
-            # output(P.block.payload)
             if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
                 return None
 
@@ -371,17 +380,15 @@ class Replica(process):
 
     def receive(msg=('done', "Done")):
         self.doneFlag = True
-        output("Received from cliend to shut down")
 
     def run():
         process_new_round_event(self.last_tc)
         while True:
-            if await(self.proposalMsgFlag):
-                self.proposalMsgFlag = False
-            elif await(self.doneFlag):
+            if await(self.doneFlag and self.mempool.allCommitted()):
                 break
-            elif timeout(2):
-
+            elif await(self.proposalMsgFlag):
+                self.proposalMsgFlag = False
+            elif timeout(self.one_round_time_timeout):
                 Pacemaker_local_timeout_round()
         output("Replica closing")
         exit()
@@ -389,20 +396,19 @@ class Replica(process):
 
 class ReplicaFI(process, Replica):
     # override send method
-    # def send(M, to):
-    #     super().send(M, to)
-    #     # do original send
-    #     # imagine that attr and val were obtained from a misbehavior spec.
-    #     # output(M)
-    #     if M[0] == "process_proposal_message":
-    #         # attr = "current_round"
-    #         # val = 3
-    #         # setattr(attr, val)
-    #         exit()
+    def send(M, to):
+        super().send(M, to)
+        # do original send
+        # imagine that attr and val were obtained from a misbehavior spec.
+        # output(M)
+        # if M[0] == "process_proposal_message":
+        #     # attr = "current_round"
+        #     # val = 3
+        #     # setattr(attr, val)
+        #     exit()
 
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
         return super().setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config)
 
     def run():
         super().run()
-        output("is this ever running?????")
