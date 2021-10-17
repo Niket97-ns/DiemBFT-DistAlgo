@@ -29,7 +29,9 @@ class ProposalMsg:
 
 class Replica(process):
 
-    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t=25):
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
+        output(config, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
+        self.config = config
         self.doneFlag = False
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
@@ -82,7 +84,7 @@ class Replica(process):
         # if the updated attribute is in another class (e.g., Pacemaker), modify the
         # assignment statement accordingly.
         if attr == 'current_round':
-            current_round = val
+            self.pacemaker_current_round = val
         elif attr == 'last_vote_round':
             last_vote_round = val
         else:
@@ -370,14 +372,16 @@ class Replica(process):
 
     def receive(msg=('done', "Done")):
         self.doneFlag = True
+        output("Received from cliend to shut down")
 
     def run():
         process_new_round_event(self.last_tc)
-        while not self.doneFlag or not self.mempool.allCommitted():
+        while True:
             if await(self.proposalMsgFlag):
                 self.proposalMsgFlag = False
-
-            elif timeout(4):
+            elif await(self.doneFlag):
+                break
+            elif timeout(2):
 
                 Pacemaker_local_timeout_round()
         output("Replica closing")
@@ -387,7 +391,20 @@ class Replica(process):
 class ReplicaFI(process, Replica):
     # override send method
     def send(M, to):
+        super().send(M, to)
         # do original send
         # imagine that attr and val were obtained from a misbehavior spec.
-        time.sleep(5)
-        super().send(M, to)
+        output(M)
+        if M[0] == "process_proposal_message":
+            # attr = "current_round"
+            # val = 3
+            # setattr(attr, val)
+            exit()
+        
+
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
+        return super().setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config)
+
+    def run():
+        super().run()
+        output("is this ever running?????")
