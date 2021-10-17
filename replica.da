@@ -26,6 +26,7 @@ class ProposalMsg:
 
 
 class Replica(process):
+
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t=25):
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
@@ -68,6 +69,18 @@ class Replica(process):
         self.safety = Safety(
             self, self.ledger, self.blockTree, self.privateKey, self.replicaPublicKeyMap)
         # -------------- end safety module initialization --------------- #
+
+    #################################################################
+    ############## Fault Injection part #############
+
+    def setattr(attr,val):
+        # we can't implement setattr using reflection, because the distalgo compiler
+        # needs to transform the assignment statements.
+        # if the updated attribute is in another class (e.g., Pacemaker), modify the
+        # assignment statement accordingly.
+        if attr == 'current_round': current_round = val
+        elif attr == 'last_vote_round': last_vote_round = val
+        else: output('error: Replica.setattr: unsupported attribute')
 
     #################################################################
     ############## Start Pacemaker Function Definitions #############
@@ -329,3 +342,19 @@ class Replica(process):
             elif timeout(4):
 
                 Pacemaker_local_timeout_round()
+
+
+
+
+
+
+
+
+class ReplicaFI(process, Replica):
+    # override send method
+    def send(M, to):
+            # do original send
+        # imagine that attr and val were obtained from a misbehavior spec.
+        time.sleep(5)
+        super().send(M, to)
+        

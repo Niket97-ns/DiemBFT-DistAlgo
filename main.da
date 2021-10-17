@@ -19,7 +19,8 @@ class DiemBFT(process):
         return (sk, pk.encode())
 
     def run():
-        replicas = new(replica.Replica, num=self.numberOfReplicas)
+        replicas = new(replica.Replica, num=self.numberOfReplicas - self.numberOfFaulty)
+        replicasFI = new(replica.ReplicaFI, num=self.numberOfFaulty)
         clients = new(client.Client, num=self.numberOfClients)
         replicaPublicKeyMap, clientPublicKeyMap = {}, {}
 
@@ -27,23 +28,32 @@ class DiemBFT(process):
         for r in replicas:
             privateKeyMap[r], replicaPublicKeyMap[r] = generateKeys()
 
+        for r in replicasFI:
+            privateKeyMap[r], replicaPublicKeyMap[r] = generateKeys()
+
         for c in clients:
             privateKeyMap[c], clientPublicKeyMap[c] = generateKeys()
+
         for r in replicas:
             setup(r, (privateKeyMap[r], clientPublicKeyMap,
                   replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 25,))
+
+        for r in replicasFI:
+            setup(r, (privateKeyMap[r], clientPublicKeyMap,
+                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 25,))
+
         for c in clients:
             setup(c, (privateKeyMap[c], clientPublicKeyMap,
                   replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 5, 2, 25,))
+        
         start(replicas)
+        start(replicasFI)
         start(clients)
 
 
 def main():
-
     config(clock="Lamport")
-    configs = [{"numberOfClients": 1,
-                "numberOfReplicas": 4, "numberOfFaulty": 1}]
+    configs = [{"numberOfClients": 1,"numberOfReplicas": 4, "numberOfFaulty": 1}]
     for config in configs:
         p = new(DiemBFT)
         setup(p, (config,))

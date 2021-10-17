@@ -43,7 +43,7 @@ class Client(process):
                 self.request_number += 1
                 output("Receved at client side ***********")
                 reset(received)
-            elif timeout(1):
+            elif timeout(6):
                 output("timed out, sending again.")
 
 
