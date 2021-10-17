@@ -12,6 +12,9 @@ from ledger_commit_info import LedgerCommitInfo
 from qc import QC
 from ledger import Ledger
 import random
+from timeoutMsg import TimeoutMsg
+from tc import TC
+import time
 
 
 class ProposalMsg:
@@ -71,8 +74,9 @@ class Replica(process):
 
         self.pacemaker_current_round = 1
         self.pacemaker_pending_timeouts = {}
-        self.pacemaker_last_round_tc = 1
-
+        self.pacemaker_last_round_tc = TC(
+            0, [0]*(2*(self.f)+1), [None]*(2*(self.f)+1))
+        self.pacemaker_local_time = 5
         # -------------- end pacemaker attribute initialization -------------- #
 
         # -------------- initialize safety module ----------------------- #
@@ -119,27 +123,79 @@ class Replica(process):
         pass
 
     def Pacemaker_get_round_timer(round):
-
+        random.seed(round)
+        return random.randint(0, 8)
         # TODO: need to understand this formula for round_timer
         # return round_time(round)
-        pass
-        # return self.round_time
 
     def Pacemaker_start_timer(new_round):
         self.Pacemaker_stop_timer(self.pacemaker_current_round)
         self.pacemaker_current_round = new_round
-        if await((self == self.Leader_get_leader(self.pacemaker_current_round))):
-            process_new_round_event(self.last_tc)
-        elif await(some(received(('process_proposal_message', P)), has=P.block.round == self.pacemaker_current_round)):
-            pass
-        elif timeout(4):
-            output("timed out")
+        self.Pacemaker_local_time = Pacemaker_get_round_timer(
+            self.pacemaker_current_round)
+
+        # print(self.mempool.q)
+        # if await((self == self.Leader_get_leader(self.pacemaker_current_round))):
+        #     process_new_round_event(self.last_tc)
+        # elif await(some(received(('process_proposal_message', P)), has=P.block.round == self.pacemaker_current_round)):
+        #     pass
+
+        # elif timeout(10):
+        #     pass
+        #     timeoutInfo = self.safety.make_timeout(self, self.privateKey,
+        #                                            self.pacemaker_current_round, self.high_qc, self.pacemaker_last_round_tc)
+        #     print("Time out info", vars(timeoutInfo))
+        #     print("Pacemaker lrtc ", self.pacemaker_last_round_tc)
+
+        # send(("process_timeout_message", TimeoutMsg(
+        #     timeoutInfo, self.pacemaker_last_round_tc, self.high_commit_qc)), to=self.validators)
+
+    def Pacemaker_local_timeout_round():
+        timeoutInfo = self.safety.make_timeout(
+            self, self.privateKey, self.pacemaker_current_round, self.high_qc, self.pacemaker_last_round_tc)
+        send(("process_timeout_message", TimeoutMsg(
+            timeoutInfo, self.pacemaker_last_round_tc, self.high_commit_qc)), to=self.validators)
+
+    def Pacemaker_process_remote_timeout(tmo):
+        tmo_info = tmo.tmo_info
+        # print(vars(tmo_info))
+        if tmo_info.round < self.pacemaker_current_round:
+            return None
+        # if tmo_info.sender()
+        if tmo_info.round not in self.pacemaker_pending_timeouts:
+
+            self.pacemaker_pending_timeouts[tmo_info.round] = set()
+            self.pacemaker_pending_timeouts[tmo_info.round].add(tmo_info)
+        else:
+
+            # Check if senders tmo_info is already present
+            # If not, insert
+            present = False
+            for i in self.pacemaker_pending_timeouts[tmo_info.round]:
+                if i.sender == tmo_info.sender:
+                    present = True
+            if not present:
+                self.pacemaker_pending_timeouts[tmo_info.round].add(tmo_info)
+        if len(self.pacemaker_pending_timeouts[tmo_info.round]) == self.f + 1:
+
+            Pacemaker_local_timeout_round()
+        if len(self.pacemaker_pending_timeouts[tmo_info.round]) == 2*self.f + 1:
+            # output("Forming quorum for round ", tmo_info.round)
+            # return TC()
+            tmo_high_qc_rounds_list = []
+            tmo_signatures_list = []
+            for t in self.pacemaker_pending_timeouts[tmo_info.round]:
+                tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
+                tmo_signatures_list.append(t.signature)
+            return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_signatures_list)
 
     def Pacemaker_advance_round_tc(tc):
         if tc == None or tc.round < self.pacemaker_current_round:
             return False
 
         self.pacemaker_last_round_tc = tc
+        # self.last_tc = tc
+        # self.last_round_tc = tc
         self.Pacemaker_start_timer(tc.round + 1)
         return True
 
@@ -148,8 +204,17 @@ class Replica(process):
             return False
 
         self.pacemaker_last_round_tc = None
+        # self.last_tc = None
+        # self.last_round_tc = None
         self.Pacemaker_start_timer(qc.vote_info.round + 1)
         # return True
+
+        # tmo_info = tmo.tmo_info
+        # if tmo_info.round < self.pacemaker_current_round:
+        #     return None
+        # if tmo_info.sender not in pending_timeouts[tmo_info.round].senders:
+        #     # pending_timeouts[tmo_info.round]
+        #     len(pending_timeouts[tmo_info.round].senders) == self.f+1
 
     #################################################################
     ############## End Pacemaker Function Definitions #############
@@ -243,13 +308,11 @@ class Replica(process):
         # Not sure what they are trying to check
         # TODO: Check code, change to get_leader and self.pacemaker.curr_round
         if self == self.Leader_get_leader(self.pacemaker_current_round):
-            output("I am the leader of round", self.pacemaker_current_round)
-            # output("My queue ", self.mempool.q)
-            # output(" -----------  ", self, " am the leader.")
-            # Create proposal Look into it again
-            # print(self.mempool.get_transactions())
+            output("I am leader of round", self.pacemaker_current_round)
             next_transaction = self.mempool.get_requested_transaction()
             output("My proposed transaction", next_transaction)
+            temp = random.randint(0, 5)
+            time.sleep(temp)
             if next_transaction is None:
                 # TODO: Return till timeout
                 b = self.blockTree.generate_block(self,
@@ -281,6 +344,7 @@ class Replica(process):
         self.process_certificate_qc(P.high_commit_qc)
 
         self.Pacemaker_advance_round_tc(P.last_tc)
+
         round = self.pacemaker_current_round
         # it should be round but name converntions was a bit weird
         self.leader = self.Leader_get_leader(round)
@@ -299,13 +363,16 @@ class Replica(process):
             self.mempool.make_transaction_pending(P.block.payload)
             send(("process_vote_msg", vote_msg), to=new_leader_name)
 
-    def receive(msg=("process_timeout_message", M), from_=c):
-        self.process_certificate_qc(M.tmo_info.high_qc)
-        self.process_certificate_qc(M.high_commit_qc)
-        self.Pacemaker_advance_round_tc(M.last_round_tc)
-        tc = self.Pacemaker_process_remote_timeout(M)
+    def receive(msg=("process_timeout_message", T), from_=c):
+        self.process_certificate_qc(T.tmo_info.high_qc)
+        self.process_certificate_qc(T.high_commit_qc)
+        # output("Received process timeout message from ", c)
+        # output("-------", vars(T))
+        self.Pacemaker_advance_round_tc(T.last_round_tc)
+        tc = self.Pacemaker_process_remote_timeout(T)
         if tc != None:
-            self.Pacemaker_advance_round(tc)
+            output("Tc formed for round ", tc.round)
+            self.Pacemaker_advance_round_tc(tc)
             self.process_new_round_event(tc)
 
     # receive handler for client requests
@@ -326,20 +393,22 @@ class Replica(process):
         return
 
     def run():
-
-        # await(some(received(("process_vote_msg", M),)))
-        # await(some(received(("process_proposal_message", M),)))
-        # await(some(received(("process_timeout_message", M),)))
-        # await(some(received(("Request", request),)))
-
-        # ## working##
+        process_new_round_event(self.last_tc)
+        while True:
+            if await(some(received(('process_proposal_message', P)), has=P.block.round == self.pacemaker_current_round)):
+                pass
+            # elif timeout(self.pacemaker_local_time):
+            elif timeout(3):
+                # output("I timed out")
+                Pacemaker_local_timeout_round()
+            # ## working##
         # if self == self.Leader_get_round_robin_leader(self.pacemaker_current_round):
         #     await(not self.mempool.isEmpty())
         #     process_new_round_event(self.last_tc)
         #     await(False)
         # else:
-        # await(self.pacemaker_current_round > 200)
-        ###########
-        await(not self.mempool.isEmpty())
-        Pacemaker_start_timer(self.pacemaker_current_round)
-        await(False)
+        #     await(self.pacemaker_current_round > 200)
+        ##########
+        # await(not self.mempool.isEmpty())
+        # Pacemaker_start_timer(self.pacemaker_current_round)
+        # await(False)

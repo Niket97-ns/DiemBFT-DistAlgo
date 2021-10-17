@@ -5,13 +5,14 @@ from ledger_commit_info import LedgerCommitInfo
 from util import valid_signatures, createDigest, createConcatString
 from vote_msg import VoteMsg
 import block_tree as bt
+from timeoutInfo import TimeOutInfo
 
 # import safet
 
 
 class Safety():
 
-    def __init__(self, author, ledger, blockTree, private_key, public_keys, highest_vote_round=0, highest_qc_round=0):
+    def __init__(self, author, ledger, blockTree, private_key, public_keys, highest_vote_round=0, highest_qc_round=-1):
 
         self._author = author
         self.ledger = ledger
@@ -48,6 +49,8 @@ class Safety():
         return self.__consecutive(block_round, qc_round) or self.__safe_to_extend(block_round, qc_round, tc)
 
     def __safe_to_timeout(self, round, qc_round, tc):
+        print("-----", qc_round, self._highest_qc_round,
+              round, self._highest_vote_round)
         if qc_round < self._highest_qc_round or round <= max(self._highest_vote_round-1, qc_round):
             # Respect highest_qc_round and don't timeout in a past round
             return False
@@ -87,12 +90,14 @@ class Safety():
 
         return None
 
-    def make_timeout(self, round, high_qc, last_tc):
+    def make_timeout(self, author, privateKey, round, high_qc, last_tc):
         qc_round = high_qc.vote_info.round
+        print("************ ", qc_round)
         # TODO: Develop valid signature function
         if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
             self.__increase_highest_vote_round(round)  # stop voting for round
-
+            # print("----------------")
             # TODO: Develop Timeout Info
-            return toi.TimeOutInfo(self.author, round, high_qc)
+            return TimeOutInfo(author, privateKey, round, high_qc)
+        print("Timeout info retruned none")
         return None

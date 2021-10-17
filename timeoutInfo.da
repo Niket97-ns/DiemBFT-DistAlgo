@@ -5,8 +5,8 @@ import nacl.utils
 
 
 class TimeOutInfo():
-    def __init__(self, sender, round, high_qc):
+    def __init__(self, sender, privateKey, round, high_qc):
         self.round = round
         self.high_qc = high_qc
         self.sender = sender
-        self.signature = util.sign(self.sender, round, high_qc.round)
+        self.signature = util.sign(privateKey, round, high_qc.vote_info.round)
