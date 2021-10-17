@@ -30,6 +30,7 @@ class ProposalMsg:
 class Replica(process):
 
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
+        self.testingFlag = True
         self.config = config
         self.doneFlag = False
         self.privateKey = privateKey
@@ -109,11 +110,15 @@ class Replica(process):
             self.pacemaker_current_round)
 
     def Pacemaker_local_timeout_round():
+
         timeoutInfo = self.safety.make_timeout(
             self, self.privateKey, self.pacemaker_current_round, self.blockTree.high_qc, self.pacemaker_last_round_tc)
         timeout_msg = TimeoutMsg(
             timeoutInfo, self.pacemaker_last_round_tc, self.blockTree.high_commit_qc)
         signed_timeout_msg = self.safety.sign(timeout_msg)
+        output("About to send timeout message for round ",
+               self.pacemaker_current_round)
+
         send(("process_timeout_message", signed_timeout_msg), to=self.validators)
 
     def Pacemaker_process_remote_timeout(tmo):
@@ -325,7 +330,14 @@ class Replica(process):
             temp_leader = self.Leader_get_leader(round)
             # need to confirm the data type of leader variable
             # output(P.block.payload)
+
+            # TODO: SYNC Up
+            send(("Sync_me", "I am behind"),
+                 to=self.validators)
+
             if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
+                if P.block.round > round:
+                    pass
                 return None
 
             self.blockTree.execute_and_insert(P.block)
@@ -341,6 +353,9 @@ class Replica(process):
                 send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
         except:
             pass
+
+    def receive(msg=("Sync me", "I am behind"), from_=r):
+        output("Received sync request from a replica ,", r)
 
     def receive(msg=("process_timeout_message", T), from_=c):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
@@ -381,7 +396,6 @@ class Replica(process):
             elif await(self.doneFlag):
                 break
             elif timeout(2):
-
                 Pacemaker_local_timeout_round()
         output("Replica closing")
         exit()
