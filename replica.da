@@ -275,8 +275,6 @@ class Replica(process):
             output("I am leader of round", self.pacemaker_current_round)
             next_transaction = self.mempool.get_requested_transaction()
             output("My proposed transaction", next_transaction)
-            # if self == self.validators[2]:
-            #     time.sleep(5)
             if next_transaction is None:
                 # TODO: Return till timeout
                 b = self.blockTree.generate_block(self,
@@ -319,7 +317,7 @@ class Replica(process):
                 # self.start = time.time()
                 self.process_new_round_event(None)
         except:
-            pass
+            pass     
 
     def receive(msg=("process_proposal_message", P), from_=r):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
@@ -353,7 +351,8 @@ class Replica(process):
                 # need to find receive handler for this send
                 new_leader_name = self.Leader_get_leader(round + 1)
                 # need to decide the message
-                self.mempool.make_transaction_pending(P.block.payload)
+                if P.block.payload != ("", ""):
+                    self.mempool.make_transaction_pending(P.block.payload)
 
                 signed_vote_msg = self.safety.sign(vote_msg)
                 send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
@@ -436,19 +435,46 @@ class Replica(process):
 
 class ReplicaFI(process, Replica):
     # override send method
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
+        super().setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config)
+        self.exitFlag = False
+        # print("In setup")
+
+    
     def send(M, to):
         super().send(M, to)
         # do original send
         # imagine that attr and val were obtained from a misbehavior spec.
-        # output(M)
-        # if M[0] == "process_proposal_message":
-        #     # attr = "current_round"
-        #     # val = 3
-        #     # setattr(attr, val)
-        #     exit()
+        if M[0] == "process_proposal_message":
+            if config['test_case'] == 'leader_crashed':
+                print("leader crashing")
+                self.exitFlag =  True
+                
+            elif config['test_case'] == 'leader_delayed':
+                time.sleep(6)
+            # attr = "current_round"
+            # val = 3
+            # setattr(attr, val)
+        if M[0] == "process_vote_msg":
+            if config['test_case'] == 'vote_message_dropped':
+                self.exitFlag =  True
 
-    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
-        return super().setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config)
+    def receive(msg=('done', "Done")):
+        self.doneFlag = True
 
     def run():
-        super().run()
+        process_new_round_event(self.last_tc)
+        while True:
+            if await(self.exitFlag):
+                print("***************REached the end*************")
+                exit()
+            elif await(self.doneFlag and self.mempool.allCommitted()):
+                break
+            elif await(self.proposalMsgFlag):
+                self.proposalMsgFlag = False
+            
+            
+            elif timeout(self.one_round_time_timeout):
+                Pacemaker_local_timeout_round()
+        # print("----------")
+        

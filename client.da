@@ -25,8 +25,7 @@ class Client(process):
         self.request_number = 1    # Initial request number
         # self.sequence_number = 1    # Sequence number to uniquely identify request
         self.committed_requests = set()  # Check for requests already committed
-    # def receive(msg=("Reply",M), from_=r):
-    #     output("got stuff")
+
 
     def run():
 

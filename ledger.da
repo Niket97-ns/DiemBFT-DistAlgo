@@ -89,7 +89,6 @@ class Ledger:
                 ledgerFile = open(self.fileName, "a")
                 ledgerFile.write("\n" + to_be_committed_state.txns[0])
                 ledgerFile.close()
-
             self.mempool.make_transaction_committed(to_be_committed_state.txns)
 
             self.pending_ledger_tree.remove(block_id)
