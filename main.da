@@ -58,7 +58,7 @@ class DiemBFT(process):
 
 
 def main():
-    config(clock="Lamport")
+    config(clock="Lamport", channel="Reliable")
     configs = [{"numberOfClients": 3, "numberOfReplicas": 7,
                 "numberOfFaulty": 2, "test_case": "leader_crashed"}]
     for config in configs:

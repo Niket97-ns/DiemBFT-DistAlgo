@@ -8,6 +8,7 @@ from block_tree import BlockTree
 from safety import Safety
 from mempool import Mempool
 from tc import TC
+from util import sign
 from vote_info import VoteInfo
 from ledger_commit_info import LedgerCommitInfo
 from qc import QC
@@ -30,6 +31,7 @@ class ProposalMsg:
 class Replica(process):
 
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
+        self.sync_up = {}
         self.testingFlag = True
         self.config = config
         self.doneFlag = False
@@ -120,8 +122,6 @@ class Replica(process):
         timeout_msg = TimeoutMsg(
             timeoutInfo, self.pacemaker_last_round_tc, self.blockTree.high_commit_qc)
         signed_timeout_msg = self.safety.sign(timeout_msg)
-        output("About to send timeout message for round ",
-               self.pacemaker_current_round)
 
         send(("process_timeout_message", signed_timeout_msg), to=self.validators)
 
@@ -360,8 +360,36 @@ class Replica(process):
         except:
             pass
 
-    def receive(msg=("Sync me", "I am behind"), from_=r):
-        output("Received sync request from a replica ,", r)
+    def receive(msg=("Sync_me", "I am behind"), from_=r):
+        all_data = (self.ledger.committed_ledger_tree,
+                    self.ledger.pending_ledger_tree,
+                    self.blockTree.high_commit_qc,
+                    self.blockTree.high_qc,
+                    self.blockTree.pending_block_tree,
+                    self.pacemaker_last_round_tc)
+        # signed_vote_msg = self.safety.sign(all_data)
+        digest = util.createDigest(pickle.dumps(all_data))
+
+        send(("present_data", pickle.dumps(all_data), digest), to=r)
+
+    def receive(msg=("present_data", sent_data, digest), from_=r):
+        verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
+
+        if util.createDigest(sent_data) == digest:
+
+            if digest not in self.sync_up:
+
+                self.sync_up[digest] = set()
+                self.sync_up[digest].add(r)
+            else:
+                self.sync_up[digest].add(r)
+
+            if len(self.sync_up[digest]) >= self.f + 1:
+                # P = pickle.loads(digest)
+                sent_data = pickle.loads(sent_data)
+
+                # P = P[0]
+                output("I got data from all")
 
     def receive(msg=("process_timeout_message", T), from_=c):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
@@ -374,7 +402,7 @@ class Replica(process):
             self.Pacemaker_advance_round_tc(T.last_round_tc)
             tc = self.Pacemaker_process_remote_timeout(T)
             if tc != None:
-                output("TC generated for round ", self.pacemaker_current_round)
+                # output("TC generated for round ", self.pacemaker_current_round)
                 self.Pacemaker_advance_round_tc(tc)
                 self.process_new_round_event(tc)
         except:
