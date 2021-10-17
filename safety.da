@@ -7,6 +7,7 @@ from vote_msg import VoteMsg
 import block_tree as bt
 from timeoutInfo import TimeOutInfo
 import pickle
+from nacl.signing import VerifyKey
 # import safet
 
 
@@ -22,6 +23,22 @@ class Safety():
         self.public_keys = public_keys
         self.highest_vote_round = highest_vote_round
         self.highest_qc_round = highest_qc_round
+
+    def valid_signatures(self, quorum, round=None, highqc_voteinfo_round=None):
+        # print("quorum:")
+        # print(quorum)
+        if quorum is None:
+            return True
+        for sender_sign_pair in quorum:
+            if sender_sign_pair is not None:
+                try:
+                    sender = sender_sign_pair[0]
+                    signed = sender_sign_pair[1]
+                    verifyKeySender = VerifyKey(self.public_keys[sender])
+                    verifyKeySender.verify(signed)
+                except BadSignatureError:   # except(BadSignatureError, Error)
+                    return False
+        return True
 
     def __increase_highest_vote_round(self, round):
         self.highest_vote_round = max(self.highest_vote_round, round)
@@ -67,8 +84,15 @@ class Safety():
     def make_vote(self, b, last_tc):
         qc_round = b.qc.vote_info.round
 
-        # TODO: Develop valid signature function
-        if valid_signatures(b, last_tc) and self.__safe_to_vote(b.round, qc_round, last_tc):
+        # Checking if b.qc and last_tc if present are valid
+        valid_signatures_check = False
+        if b.qc is None or self.valid_signatures(b.qc.signatures):
+            valid_signatures_check = True
+        if last_tc is not None and not self.valid_signatures(last_tc.tmo_signatures):
+            valid_signatures_check = False
+
+        if valid_signatures_check and self.__safe_to_vote(b.round, qc_round, last_tc):
+        # if valid_signatures(b, last_tc) and self.__safe_to_vote(b.round, qc_round, last_tc):
             self.__update_highest_qc_round(qc_round)    # Protect qc round
             # Don't vote again in this or lower round
             self.__increase_highest_vote_round(b.round)
@@ -89,8 +113,17 @@ class Safety():
 
     def make_timeout(self, author, privateKey, round, high_qc, last_tc):
         qc_round = high_qc.vote_info.round
-        # TODO: Develop valid signature function
-        if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
+
+        # Checking if high_qc and last_tc if present are valid
+        valid_signatures_check = False
+        if high_qc is None or self.valid_signatures(high_qc.signatures):
+            valid_signatures_check = True
+        if last_tc is not None and not self.valid_signatures(last_tc.tmo_signatures):
+            valid_signatures_check = False
+
+        # if True:
+        if valid_signatures_check and self.__safe_to_timeout(round, qc_round, last_tc):
+        # if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
             self.__increase_highest_vote_round(round)  # stop voting for round
             # TODO: Develop Timeout Info
             return TimeOutInfo(author, privateKey, round, high_qc)

@@ -110,21 +110,19 @@ class BlockTree:
         if vote_idx not in self.pending_votes:
             self.pending_votes[vote_idx] = set()
             self.pending_signers[vote_idx] = set()
-            self.pending_signers[vote_idx].add(v.author)
-            self.pending_votes[vote_idx].add(v.signature)
-        else:
-            self.pending_votes[vote_idx].add(v.signature)
-            self.pending_signers[vote_idx].add(v.author)
+
+        self.pending_signers[vote_idx].add(v.author)
+        self.pending_votes[vote_idx].add((v.author, v.signature))  # tuple of sender and sign
 
         if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:  # Quorum formed
             # Alert NOT sure about exe_state_id
 
             # TODO: Adding signature of author in qc
-            qc = QC(v.vote_info,
-                    self.pending_votes[vote_idx],
-                    v.ledger_commit_info,
-                    self.author,
-                    self.pending_signers[vote_idx]
+            qc = QC(vote_info=v.vote_info,
+                    signatures=self.pending_votes[vote_idx],
+                    ledger_commit_info=v.ledger_commit_info,
+                    author=self.author,
+                    signers=self.pending_signers[vote_idx]
                     )
             return qc, wasCommitted,client
         return None, wasCommitted,client
