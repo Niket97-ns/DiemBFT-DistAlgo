@@ -51,27 +51,13 @@ class DiemBFT(process):
         start(clients)
         start(replicasFI)
         await(each(c in clients, has=received(('done',), from_=c)))
-<<<<<<< HEAD
         # await(len(setof(r, received(('done',), from_=c))) == self.numberOfClients)
-        send(('done', "Done",), to=(replicas))
-
-=======
-
         send(('done', "Done",), to=(replicasFI|replicas))
-        
->>>>>>> ce0232aa3278983e80976690dd4cd12db74a7e22
         exit()
 
 
 def main():
 
-<<<<<<< HEAD
-    # config(channel="fifo")
-    # configs = [{"numberOfClients": 3, "numberOfReplicas": 7,
-    #             "numberOfFaulty": 2, "test_case": "leader_crashed"},
-    #             {"numberOfClients": 3, "numberOfReplicas": 7,
-    #             "numberOfFaulty": 2, "test_case": "vote_message_dropped"}]
-=======
     # configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
     #             "numberOfFaulty": 1, "test_case": "leader_crashed"}, 
     #             {"numberOfClients": 1, "numberOfReplicas": 4,
@@ -82,7 +68,6 @@ def main():
     #             "numberOfFaulty": 1, "test_case": "happy_path"},
     #             {"numberOfClients": 1, "numberOfReplicas": 4,
     #             "numberOfFaulty": 2, "test_case": "leader_delay"}]
->>>>>>> ce0232aa3278983e80976690dd4cd12db74a7e22
 
     configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
                 "numberOfFaulty": 1, "test_case": "leader_crashed"}]
