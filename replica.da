@@ -30,7 +30,6 @@ class ProposalMsg:
 class Replica(process):
 
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
-        output(config, "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^")
         self.config = config
         self.doneFlag = False
         self.privateKey = privateKey
@@ -390,17 +389,16 @@ class Replica(process):
 
 class ReplicaFI(process, Replica):
     # override send method
-    def send(M, to):
-        super().send(M, to)
-        # do original send
-        # imagine that attr and val were obtained from a misbehavior spec.
-        output(M)
-        if M[0] == "process_proposal_message":
-            # attr = "current_round"
-            # val = 3
-            # setattr(attr, val)
-            exit()
-        
+    # def send(M, to):
+    #     super().send(M, to)
+    #     # do original send
+    #     # imagine that attr and val were obtained from a misbehavior spec.
+    #     # output(M)
+    #     if M[0] == "process_proposal_message":
+    #         # attr = "current_round"
+    #         # val = 3
+    #         # setattr(attr, val)
+    #         exit()
 
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
         return super().setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config)
