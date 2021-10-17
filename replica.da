@@ -18,10 +18,11 @@ import time
 
 
 class ProposalMsg:
-    def __init__(self, block, last_tc, high_commit_qc):
+    def __init__(self, block, last_tc, high_commit_qc, safety):
         self.block = block
         self.last_tc = last_tc
         self.high_commit_qc = high_commit_qc
+        self.signature = safety.sign(self.block.id)
 
 
 class Replica(process):
@@ -245,14 +246,14 @@ class Replica(process):
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, "")
                 # TODO: Handle this
-                send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc)),
+                send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc, self.safety)),
                      to=self.validators)
                 pass
             else:
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, next_transaction)
                 # TODO: Handle this
-                send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc)),
+                send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc, self.safety)),
                      to=self.validators)
 
     # I am confused if this is the same vote handler

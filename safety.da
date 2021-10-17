@@ -6,7 +6,7 @@ from util import valid_signatures, createDigest, createConcatString
 from vote_msg import VoteMsg
 import block_tree as bt
 from timeoutInfo import TimeOutInfo
-
+import pickle
 # import safet
 
 
@@ -95,3 +95,7 @@ class Safety():
             # TODO: Develop Timeout Info
             return TimeOutInfo(author, privateKey, round, high_qc)
         return None
+
+    def sign(self, *args):
+        a = tuple(args)
+        return self.private_key.sign(pickle.dumps(a))
