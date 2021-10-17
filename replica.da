@@ -135,7 +135,8 @@ class Replica(process):
             tmo_signatures_list = []
             for t in self.pacemaker_pending_timeouts[tmo_info.round]:
                 tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
-                tmo_signatures_list.append(t.signature)
+                tmo_signatures_list.append((t.sender,t.signature)) # tuple of sender and sign
+
             return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_signatures_list)
 
     def Pacemaker_advance_round_tc(tc):
@@ -277,6 +278,7 @@ class Replica(process):
 
     def receive(msg=("process_vote_msg", V), from_=c):
         qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
+        
         if wasCommittedFlag and client is not None and client != "":
             
             send(('Reply',self),to=client)
