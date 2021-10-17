@@ -36,7 +36,8 @@ class LedgerTree:
 
 class Ledger:
 
-    def __init__(self, author, mempool):
+    def __init__(self, author, mempool, test_case):
+        self.test_case = test_case
         self.mempool = mempool
         self.author = author
         self.fileName = str(self.author)+".txt"
@@ -87,7 +88,7 @@ class Ledger:
             # print(self.committed_ledger_tree.block_id_to_state)
             self.commit_cache[to_be_committed_state.txns] = True
             if to_be_committed_state.txns[0] != "":
-                ledgerFile = open(self.fileName, "a")
+                ledgerFile = open(self.test_case +"/"+self.fileName, "a")
                 ledgerFile.write("\n" + to_be_committed_state.txns[0])
                 ledgerFile.close()
             self.mempool.make_transaction_committed(to_be_committed_state.txns)
