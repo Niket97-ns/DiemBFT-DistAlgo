@@ -15,6 +15,7 @@ import random
 from timeoutMsg import TimeoutMsg
 from tc import TC
 import time
+import util
 
 
 class ProposalMsg:
@@ -27,6 +28,7 @@ class ProposalMsg:
 
 class Replica(process):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t=25):
+        self.doneFlag = False
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
@@ -122,7 +124,8 @@ class Replica(process):
             tmo_signatures_list = []
             for t in self.pacemaker_pending_timeouts[tmo_info.round]:
                 tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
-                tmo_signatures_list.append((t.sender,t.signature)) # tuple of sender and sign
+                # tuple of sender and sign
+                tmo_signatures_list.append((t.sender, t.signature))
 
             return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_signatures_list)
 
@@ -231,7 +234,7 @@ class Replica(process):
         wasCommitted, client = self.blockTree.process_qc(qc)
 
         if wasCommitted and client is not None and client != "":
-            send(('Reply',self),to=client)
+            send(('Reply', self), to=client)
 
         self.Leader_update_leaders(qc)
         # TODO: Check paper : Code invalid
@@ -244,7 +247,8 @@ class Replica(process):
             output("I am leader of round", self.pacemaker_current_round)
             next_transaction = self.mempool.get_requested_transaction()
             output("My proposed transaction", next_transaction)
-          
+            # if self == self.validators[2]:
+            #     time.sleep(5)
             if next_transaction is None:
                 # TODO: Return till timeout
                 b = self.blockTree.generate_block(self,
@@ -265,11 +269,11 @@ class Replica(process):
 
     def receive(msg=("process_vote_msg", V), from_=c):
         qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
-        
+
         if wasCommittedFlag and client is not None and client != "":
-            
-            send(('Reply',self),to=client)
-            
+
+            send(('Reply', self), to=client)
+
         if qc != None:
             self.process_certificate_qc(qc)
             self.process_new_round_event(None)
@@ -311,23 +315,28 @@ class Replica(process):
             self.process_new_round_event(tc)
 
     # receive handler for client requests
-    def receive(msg=('Request', request), from_=c):
+    def receive(msg=('Request', request, message_to_hash, digest), from_=c):
         request_tuple = (request, c)
-        if request_tuple in self.ledger.commit_cache:
+        if util.checkDigest(message_to_hash, digest):
+            if request_tuple in self.ledger.commit_cache:
 
-            output("Sending from cache")
-            send(('Reply',self),to=c)
-            return
+                send(('Reply', self), to=c)
+                return
 
-        self.mempool.addTxns(request_tuple)
+            self.mempool.addTxns(request_tuple)
+
         return
+
+    def receive(msg=('done', "Done")):
+        self.doneFlag = True
 
     def run():
         process_new_round_event(self.last_tc)
-        while True:
+        while not self.doneFlag or not self.mempool.allCommitted():
             if await(self.proposalMsgFlag):
                 self.proposalMsgFlag = False
 
             elif timeout(4):
 
                 Pacemaker_local_timeout_round()
+        output("Replica closing")

@@ -5,10 +5,11 @@ import nacl.utils
 from nacl.signing import SigningKey
 import random
 import time
+import util
 
 
 class Client(process):
-    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f=0, number_of_requests=4, seed=2, t=25):
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, main, f=0, number_of_requests=4, seed=2, t=25):
         self.f = f      # Maximum Byzantine Fault Tolerance
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
@@ -24,7 +25,7 @@ class Client(process):
         self.request_number = 1    # Initial request number
         # self.sequence_number = 1    # Sequence number to uniquely identify request
         self.committed_requests = set()  # Check for requests already committed
-
+        self.main = main
     # def receive(msg=("Reply",M), from_=r):
     #     output("got stuff")
 
@@ -34,18 +35,20 @@ class Client(process):
             time.sleep(self.delay)
             self.delay = set_initial_delay()
             request = str(self)+"-"+str(request_number)
+            encoded_request = str.encode(request)
+            digest, msg_to_send = util.createDigest(encoded_request)
             # TODO: use another variable to store validators
-            send(('Request', request), to=self.replicaPublicKeyMap.keys())
+            send(('Request', request, msg_to_send, digest),
+                 to=self.replicaPublicKeyMap.keys())
             # if await(some(received(('Reply',_)))):
 
-
-            if await(len(setof(r, received(('Reply',_), from_=r))) > self.f + 1):
+            if await(len(setof(r, received(('Reply', _), from_=r))) > self.f + 1):
                 self.request_number += 1
                 output("Receved at client side ***********")
                 reset(received)
-            elif timeout(1):
+            elif timeout(3):
                 output("timed out, sending again.")
-
+        send(('done',), to=parent())
 
     def set_initial_delay():
         return random.randint(0, 1)//100

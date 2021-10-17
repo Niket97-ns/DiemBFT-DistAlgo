@@ -1,7 +1,5 @@
 # type: ignore
 # import queue
-
-
 class Mempool:
     def __init__(self, maxSize=100, txnsInBlock=1) -> None:
         self.q = {}
@@ -15,6 +13,12 @@ class Mempool:
     def isEmpty(self):
         for key in self.q.keys():
             if self.q[key] == "REQUESTED":
+                return False
+        return True
+
+    def allCommitted(self):
+        for key in self.q.keys():
+            if self.q[key] != "COMMITTED":
                 return False
         return True
 

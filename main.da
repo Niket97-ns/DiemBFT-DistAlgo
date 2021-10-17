@@ -34,9 +34,13 @@ class DiemBFT(process):
                   replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 25,))
         for c in clients:
             setup(c, (privateKeyMap[c], clientPublicKeyMap,
-                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 5, 2, 25,))
+                  replicaPublicKeyMap, self, (self.numberOfReplicas-1)//3, 5, 2, 25,))
         start(replicas)
         start(clients)
+        await(each(c in clients, has=received(('done',), from_=c)))
+        # await(len(setof(r, received(('done',), from_=c))) == self.numberOfClients)
+        # output("received  done")
+        send(('done', "Done",), to=(replicas))
 
 
 def main():
