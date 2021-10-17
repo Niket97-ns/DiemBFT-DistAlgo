@@ -51,9 +51,8 @@ class DiemBFT(process):
         start(clients)
         start(replicasFI)
         await(each(c in clients, has=received(('done',), from_=c)))
-
+        # await(len(setof(r, received(('done',), from_=c))) == self.numberOfClients)
         send(('done', "Done",), to=(replicasFI | replicas))
-
         exit()
 
 
