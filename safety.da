@@ -14,20 +14,20 @@ class Safety():
 
     def __init__(self, author, ledger, blockTree, private_key, public_keys, highest_vote_round=0, highest_qc_round=-1):
 
-        self._author = author
+        self.author = author
         self.ledger = ledger
         self.blockTree = blockTree
         # private key of replica using the safety object.
-        self._private_key = private_key
-        self._public_keys = public_keys
-        self._highest_vote_round = highest_vote_round
-        self._highest_qc_round = highest_qc_round
+        self.private_key = private_key
+        self.public_keys = public_keys
+        self.highest_vote_round = highest_vote_round
+        self.highest_qc_round = highest_qc_round
 
     def __increase_highest_vote_round(self, round):
-        self._highest_vote_round = max(self._highest_vote_round, round)
+        self.highest_vote_round = max(self.highest_vote_round, round)
 
     def __update_highest_qc_round(self, qc_round):
-        self._highest_qc_round = max(self._highest_qc_round, qc_round)
+        self.highest_qc_round = max(self.highest_qc_round, qc_round)
 
     def __consecutive(self, block_round, round):
         '''
@@ -41,7 +41,7 @@ class Safety():
 
     def __safe_to_vote(self, block_round, qc_round, tc):
 
-        if block_round <= max(self._highest_vote_round, qc_round):
+        if block_round <= max(self.highest_vote_round, qc_round):
             # 1. Must vote in monotonically increasing rounds AND
             # 2. Must extend a smaller round.
             return False
@@ -49,9 +49,7 @@ class Safety():
         return self.__consecutive(block_round, qc_round) or self.__safe_to_extend(block_round, qc_round, tc)
 
     def __safe_to_timeout(self, round, qc_round, tc):
-        print("-----", qc_round, self._highest_qc_round,
-              round, self._highest_vote_round)
-        if qc_round < self._highest_qc_round or round <= max(self._highest_vote_round-1, qc_round):
+        if qc_round < self.highest_qc_round or round <= max(self.highest_vote_round-1, qc_round):
             # Respect highest_qc_round and don't timeout in a past round
             return False
 
@@ -67,7 +65,6 @@ class Safety():
             return None
 
     def make_vote(self, b, last_tc):
-
         qc_round = b.qc.vote_info.round
 
         # TODO: Develop valid signature function
@@ -86,18 +83,15 @@ class Safety():
 
             ledger_commit_info = LedgerCommitInfo(
                 digest_of_vote_info, self.__commit_state_id_candidate(b.round, b.qc))
-            return VoteMsg(self._author, vote_info, ledger_commit_info, self.blockTree.high_commit_qc, self._private_key)
+            return VoteMsg(self.author, vote_info, ledger_commit_info, self.blockTree.high_commit_qc, self.private_key)
 
         return None
 
     def make_timeout(self, author, privateKey, round, high_qc, last_tc):
         qc_round = high_qc.vote_info.round
-        print("************ ", qc_round)
         # TODO: Develop valid signature function
         if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
             self.__increase_highest_vote_round(round)  # stop voting for round
-            # print("----------------")
             # TODO: Develop Timeout Info
             return TimeOutInfo(author, privateKey, round, high_qc)
-        print("Timeout info retruned none")
         return None

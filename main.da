@@ -32,19 +32,18 @@ class DiemBFT(process):
         for r in replicas:
             setup(r, (privateKeyMap[r], clientPublicKeyMap,
                   replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 25,))
-            start(r)
         for c in clients:
             setup(c, (privateKeyMap[c], clientPublicKeyMap,
                   replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 5, 2, 25,))
-            start(c)
+        start(replicas)
+        start(clients)
 
 
 def main():
 
     config(clock="Lamport")
-    configs = [{"numberOfClients": 2,
-                "numberOfReplicas": 7, "numberOfFaulty": 1}]
-    output("in config")
+    configs = [{"numberOfClients": 1,
+                "numberOfReplicas": 4, "numberOfFaulty": 1}]
     for config in configs:
         p = new(DiemBFT)
         setup(p, (config,))

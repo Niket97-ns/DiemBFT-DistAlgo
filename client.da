@@ -31,15 +31,13 @@ class Client(process):
             time.sleep(self.delay)
             self.delay = set_initial_delay()
             request = str(self)+"-"+str(request_number)
-            # output("Client ", self, " will send ", request)
             # TODO: use another variable to store validators
-            output("Sending request ",request)
             send(('Request', request), to=self.replicaPublicKeyMap.keys())
             self.request_number += 1
             # await(some(received("ResponseHandler", (response, response_digest, request_number,))))
 
     def set_initial_delay():
-        return random.randint(0,1)//100
+        return random.randint(0, 1)//100
 
     def generate_request():
         return request
