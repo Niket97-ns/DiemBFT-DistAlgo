@@ -229,12 +229,10 @@ class Replica(process):
 
     def process_certificate_qc(qc):
         wasCommitted, client = self.blockTree.process_qc(qc)
-        if wasCommitted and client is not None and client != "":
-            output("Replying to client", client)
 
-            # TODO: Tell client
-            send(("Reply", ),
-                 to=client)
+        if wasCommitted and client is not None and client != "":
+            send(('Reply',self),to=client)
+
         self.Leader_update_leaders(qc)
         # TODO: Check paper : Code invalid
         self.Pacemaker_advance_round_qc(qc)
@@ -246,8 +244,7 @@ class Replica(process):
             output("I am leader of round", self.pacemaker_current_round)
             next_transaction = self.mempool.get_requested_transaction()
             output("My proposed transaction", next_transaction)
-            if self == self.validators[2]:
-                time.sleep(5)
+          
             if next_transaction is None:
                 # TODO: Return till timeout
                 b = self.blockTree.generate_block(self,
@@ -270,11 +267,10 @@ class Replica(process):
         qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
         
         if wasCommittedFlag and client is not None and client != "":
-            output("Replying to client", client)
-            send(("Reply", ),
-                 to=client)
+            
+            send(('Reply',self),to=client)
+            
         if qc != None:
-            output("QC generated ")
             self.process_certificate_qc(qc)
             self.process_new_round_event(None)
 
@@ -319,9 +315,8 @@ class Replica(process):
         request_tuple = (request, c)
         if request_tuple in self.ledger.commit_cache:
 
-            # TODO:Send previous response to client
-            send(("Reply", ),
-                 to=c)
+            output("Sending from cache")
+            send(('Reply',self),to=c)
             return
 
         self.mempool.addTxns(request_tuple)
@@ -334,6 +329,5 @@ class Replica(process):
                 self.proposalMsgFlag = False
 
             elif timeout(4):
-                # output("Getting called for round ",
-                #        self.pacemaker_current_round)
+
                 Pacemaker_local_timeout_round()
