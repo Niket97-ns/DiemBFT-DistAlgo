@@ -1,4 +1,5 @@
 # type: ignore
+import pickle
 import nacl.utils
 from nacl.signing import SigningKey
 from nacl.signing import VerifyKey
@@ -109,8 +110,10 @@ class Replica(process):
     def Pacemaker_local_timeout_round():
         timeoutInfo = self.safety.make_timeout(
             self, self.privateKey, self.pacemaker_current_round, self.blockTree.high_qc, self.pacemaker_last_round_tc)
-        send(("process_timeout_message", TimeoutMsg(
-            timeoutInfo, self.pacemaker_last_round_tc, self.blockTree.high_commit_qc)), to=self.validators)
+        timeout_msg = TimeoutMsg(
+            timeoutInfo, self.pacemaker_last_round_tc, self.blockTree.high_commit_qc)
+        signed_timeout_msg = self.safety.sign(timeout_msg)
+        send(("process_timeout_message", signed_timeout_msg), to=self.validators)
 
     def Pacemaker_process_remote_timeout(tmo):
         tmo_info = tmo.tmo_info
@@ -270,77 +273,99 @@ class Replica(process):
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, ("", ""))
                 # TODO: Handle this
-                send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc, self.safety)),
+                new_proposal = ProposalMsg(
+                    b, last_tc, self.blockTree.high_commit_qc, self.safety)
+                signed_proposal = self.safety.sign(new_proposal)
+                send(("process_proposal_message", signed_proposal),
                      to=self.validators)
                 pass
             else:
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, next_transaction)
                 # TODO: Handle this
-                send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc, self.safety)),
+                new_proposal = ProposalMsg(
+                    b, last_tc, self.blockTree.high_commit_qc, self.safety)
+                signed_proposal = self.safety.sign(new_proposal)
+                send(("process_proposal_message", signed_proposal),
                      to=self.validators)
 
     # I am confused if this is the same vote handler
     # because the sequence of these proceders in the papaer is different
 
     def receive(msg=("process_vote_msg", V), from_=c):
-        qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
+        verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
+        try:
+            verifyKeySender.verify(V.message, V.signature)
+            V = pickle.loads(V.message)
+            V = V[0]
+            qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
+            if wasCommittedFlag and client is not None and client != "":
 
-        if wasCommittedFlag and client is not None and client != "":
+                send(('Reply', self), to=client)
 
-            send(('Reply', self), to=client)
-
-        if qc != None:
-            self.process_certificate_qc(qc)
-            self.process_new_round_event(None)
+            if qc != None:
+                self.process_certificate_qc(qc)
+                self.process_new_round_event(None)
+        except:
+            pass
 
     def receive(msg=("process_proposal_message", P), from_=r):
-        self.process_certificate_qc(P.block.qc)
-        self.process_certificate_qc(P.high_commit_qc)
+        verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
+        try:
+            verifyKeySender.verify(P.message, P.signature)
+            P = pickle.loads(P.message)
+            P = P[0]
+            self.process_certificate_qc(P.block.qc)
+            self.process_certificate_qc(P.high_commit_qc)
 
-        self.Pacemaker_advance_round_tc(P.last_tc)
-        round = self.pacemaker_current_round
-        # it should be round but name converntions was a bit weird
-        temp_leader = self.Leader_get_leader(round)
-        # need to confirm the data type of leader variable
+            self.Pacemaker_advance_round_tc(P.last_tc)
+            round = self.pacemaker_current_round
+            # it should be round but name converntions was a bit weird
+            temp_leader = self.Leader_get_leader(round)
+            # need to confirm the data type of leader variable
+            # output(P.block.payload)
+            if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
+                return None
 
-        if P.block.round != round or r != temp_leader or P.block.author != temp_leader:
-            return None
+            self.blockTree.execute_and_insert(P.block)
 
-        self.blockTree.execute_and_insert(P.block)
+            vote_msg = self.safety.make_vote(P.block, P.last_tc)
+            if vote_msg != None:
+                # need to find receive handler for this send
+                new_leader_name = self.Leader_get_leader(round + 1)
+                # need to decide the message
+                self.mempool.make_transaction_pending(P.block.payload)
 
-        vote_msg = self.safety.make_vote(P.block, P.last_tc)
-        if vote_msg != None:
-            # need to find receive handler for this send
-            new_leader_name = self.Leader_get_leader(round + 1)
-            # need to decide the message
-            self.mempool.make_transaction_pending(P.block.payload)
-            send(("process_vote_msg", vote_msg), to=new_leader_name)
+                signed_vote_msg = self.safety.sign(vote_msg)
+                send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
+        except:
+            pass
 
     def receive(msg=("process_timeout_message", T), from_=c):
-        # output("Processing timeout message")
-        self.process_certificate_qc(T.tmo_info.high_qc)
-        self.process_certificate_qc(T.high_commit_qc)
-        self.Pacemaker_advance_round_tc(T.last_round_tc)
-        tc = self.Pacemaker_process_remote_timeout(T)
-        # output("TC was generated")
-        if tc != None:
-            output("TC generated for round ", self.pacemaker_current_round)
-            # output(vars(tc))
-            self.Pacemaker_advance_round_tc(tc)
-            self.process_new_round_event(tc)
+        verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
+        try:
+            verifyKeySender.verify(T.message, T.signature)
+            T = pickle.loads(T.message)
+            T = T[0]
+            self.process_certificate_qc(T.tmo_info.high_qc)
+            self.process_certificate_qc(T.high_commit_qc)
+            self.Pacemaker_advance_round_tc(T.last_round_tc)
+            tc = self.Pacemaker_process_remote_timeout(T)
+            if tc != None:
+                output("TC generated for round ", self.pacemaker_current_round)
+                self.Pacemaker_advance_round_tc(tc)
+                self.process_new_round_event(tc)
+        except:
+            pass
 
     # receive handler for client requests
     def receive(msg=('Request', request, message_to_hash, digest), from_=c):
         request_tuple = (request, c)
         if util.checkDigest(message_to_hash, digest):
             if request_tuple in self.ledger.commit_cache:
-
                 send(('Reply', self), to=c)
                 return
-
             self.mempool.addTxns(request_tuple)
-
         return
 
     def receive(msg=('done', "Done")):
@@ -356,6 +381,7 @@ class Replica(process):
 
                 Pacemaker_local_timeout_round()
         output("Replica closing")
+        exit()
 
 
 class ReplicaFI(process, Replica):

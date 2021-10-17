@@ -83,6 +83,7 @@ class Ledger:
         try:
             to_be_committed_state.is_committed = True
             self.committed_ledger_tree.add(block_id, to_be_committed_state)
+            # print(self.committed_ledger_tree.block_id_to_state)
             self.commit_cache[to_be_committed_state.txns] = True
             ledgerFile = open(self.fileName, "a")
             ledgerFile.write("\n" + to_be_committed_state.txns[0])

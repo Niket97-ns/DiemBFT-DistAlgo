@@ -1,0 +1,60 @@
+# type :ignore
+
+
+from nacl.signing import SigningKey
+from nacl.signing import VerifyKey
+import pickle
+
+
+class A:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
+a = A(1, 2)
+# print(a)
+# print(vars(a))
+# Generate a new random signing key
+signing_key = SigningKey.generate()
+
+# Sign a message with the signing key
+signed = signing_key.sign(pickle.dumps(a))
+
+# Obtain the verify key for a given signing key
+verify_key = signing_key.verify_key
+
+# Serialize the verify key to send it to a third party
+verify_key_bytes = verify_key.encode()
+
+# Create a VerifyKey object from a hex serialized public key
+verify_key = VerifyKey(verify_key_bytes)
+
+# Check the validity of a message's signature
+# The message and the signature can either be passed together, or
+# separately if the signature is decoded to raw bytes.
+# These are equivalent:
+# verify_key.verify(signed)
+verify_key.verify(signed.message, signed.signature)
+a = pickle.loads(signed.message)
+print("--==-", a)
+print(a.x, a.y)
+# print("------", a)
+# try:
+#     forged = signed[:-1] + bytes([int(signed[-1]) ^ 1])
+#     verify_key.verify(forged)
+# except:
+#     print("didnt work")
+# print(vars(pickle.loads(signed.message)), signed.signature)
+# print(pickle.loads(signed.message))
+
+signed2 = signing_key.sign(pickle.dumps(pickle.loads(signed.message)))
+verify_key.verify(signed2.message, signed2.signature)
+print("------", signed.message, signed.signature)
+
+
+# Alter the signed message text
+# forged = signed[:-1] + bytes([int(signed[-1]) ^ 1])
+# # Will raise nacl.exceptions.BadSignatureError, since the signature check
+# # is failing
+# verify_key.verify(forged)

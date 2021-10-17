@@ -25,7 +25,6 @@ class Client(process):
         self.request_number = 1    # Initial request number
         # self.sequence_number = 1    # Sequence number to uniquely identify request
         self.committed_requests = set()  # Check for requests already committed
-        self.main = main
     # def receive(msg=("Reply",M), from_=r):
     #     output("got stuff")
 
@@ -49,6 +48,7 @@ class Client(process):
             elif timeout(6):
                 output("timed out, sending again.")
         send(('done',), to=parent())
+        exit()
 
     def set_initial_delay():
         return random.randint(0, 1)//100
