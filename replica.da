@@ -349,10 +349,6 @@ class Replica(process):
             # need to confirm the data type of leader variable
             # output(P.block.payload)
 
-            # # TODO: SYNC Up
-            # send(("Sync_me", "I am behind"),
-            #      to=self.validators)
-
             if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
                 # if P.block.round > round:
                 #     pass
