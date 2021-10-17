@@ -8,21 +8,14 @@ class Mempool:
 
         self.txnsInBlock = txnsInBlock
 
-    def addTxns(self, txn):
+    def addTxns(self, txn, client_id):
         # self.q.append(newObj)
-        self.q[txn] = "REQUESTED"
-
-    def get_transactions(self):
-        if self.isEmpty():
-            return None
-        else:
-            return self.q.pop()
+        self.q[(txn, client_id)] = "REQUESTED"
 
     def isEmpty(self):
         for key in self.q.keys():
             if self.q[key] == "REQUESTED":
                 return False
-
         return True
 
     def make_transaction_committed(self, txn):

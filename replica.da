@@ -227,7 +227,12 @@ class Replica(process):
     ############## End LeaderElection Function Definitions #############
 
     def process_certificate_qc(qc):
-        self.blockTree.process_qc(qc)
+        wasCommitted, client = self.blockTree.process_qc(qc)
+        if wasCommitted and client is not None:
+
+            # TODO: Tell client
+            send(("Reply", ),
+                 to=client)
         self.Leader_update_leaders(qc)
         # TODO: Check paper : Code invalid
         self.Pacemaker_advance_round_qc(qc)
@@ -244,7 +249,7 @@ class Replica(process):
             if next_transaction is None:
                 # TODO: Return till timeout
                 b = self.blockTree.generate_block(self,
-                                                  self.pacemaker_current_round, "")
+                                                  self.pacemaker_current_round, ("", ""))
                 # TODO: Handle this
                 send(("process_proposal_message", ProposalMsg(b, last_tc, self.blockTree.high_commit_qc, self.safety)),
                      to=self.validators)
@@ -260,7 +265,10 @@ class Replica(process):
     # because the sequence of these proceders in the papaer is different
 
     def receive(msg=("process_vote_msg", V), from_=c):
-        qc = self.blockTree.process_vote(V)
+        qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
+        if wasCommittedFlag and client is not None:
+            send(("Reply", ),
+                 to=client)
         if qc != None:
             output("QC generated ")
             self.process_certificate_qc(qc)
@@ -304,13 +312,15 @@ class Replica(process):
 
     # receive handler for client requests
     def receive(msg=('Request', request), from_=c):
-        if request in self.commit_cache:
+        request_tuple = (request, c)
+        if request_tuple in self.ledger.commit_cache:
 
             # TODO:Send previous response to client
+            send(("Reply", ),
+                 to=c)
             return
 
-        self.mempool.addTxns(request)
-
+        self.mempool.addTxns(request_tuple)
         return
 
     def run():

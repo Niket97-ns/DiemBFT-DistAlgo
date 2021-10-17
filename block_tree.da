@@ -83,9 +83,10 @@ class BlockTree:
         self.pending_signers = {}
 
     def process_qc(self, qc):
-
+        wasCommitted = False
+        client = None
         if qc.ledger_commit_info.commit_state_id != 0 and qc.ledger_commit_info.commit_state_id != None:
-            self.ledger.commit(qc.vote_info.parent_id)
+            wasCommitted, client = self.ledger.commit(qc.vote_info.parent_id)
             # parent becomes new root we remove the committed message from the ppending tree
             # TODO: Prune
             # self.pending_block_tree.prune(qc.vote_info.parent_id)
@@ -96,13 +97,14 @@ class BlockTree:
 
         if qc.vote_info.round > self.high_qc.vote_info.round:
             self.high_qc = qc
+        return wasCommitted, client
 
     def execute_and_insert(self, block):
         self.ledger.speculate(block.qc.vote_info.id, block.id, block.payload)
         self.pending_block_tree.add(block)
 
     def process_vote(self, v):
-        self.process_qc(v.high_commit_qc)
+        wasCommitted, client = self.process_qc(v.high_commit_qc)
         vote_idx = createDigest(createConcatString(v.ledger_commit_info))[0]
 
         if vote_idx not in self.pending_votes:
@@ -124,8 +126,8 @@ class BlockTree:
                     self.author,
                     self.pending_signers[vote_idx]
                     )
-            return qc
-        return None
+            return qc, wasCommitted,client
+        return None, wasCommitted,client
 
     def generate_block(self, author, curr_round, txns):
         return Block(author, curr_round, txns, self.high_qc)
