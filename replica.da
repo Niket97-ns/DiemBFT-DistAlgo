@@ -17,6 +17,7 @@ from timeoutMsg import TimeoutMsg
 from tc import TC
 import time
 import util
+import os
 
 
 class ProposalMsg:
@@ -25,6 +26,7 @@ class ProposalMsg:
         self.last_tc = last_tc
         self.high_commit_qc = high_commit_qc
         self.signature = safety.sign(self.block.id)
+        
 
 
 class Replica(process):
@@ -37,6 +39,9 @@ class Replica(process):
         self.clientPublicKeyMap = clientPublicKeyMap
         self.replicaPublicKeyMap = replicaPublicKeyMap
         self.proposalMsgFlag = False
+        if not os.path.isdir(config['test_case']):
+            os.mkdir(config['test_case'])
+
         # ---------- start leaderElection -------- #
         self.validators = list(replicaPublicKeyMap.keys())
         self.window_size = 4
@@ -54,7 +59,7 @@ class Replica(process):
         # -------------- End ledger initialization ------ #
 
         # ------------- Initialize ledger object -------- #
-        self.ledger = Ledger(self, self.mempool)
+        self.ledger = Ledger(self, self.mempool, config['test_case'])
         # -------------- End ledger initialization ------ #
 
         # --------------- Initialize block tree ---------- #
@@ -120,8 +125,9 @@ class Replica(process):
         timeout_msg = TimeoutMsg(
             timeoutInfo, self.pacemaker_last_round_tc, self.blockTree.high_commit_qc)
         signed_timeout_msg = self.safety.sign(timeout_msg)
-        output("About to send timeout message for round ",
-               self.pacemaker_current_round)
+
+        
+        output("About to send timeout message for round ", self.pacemaker_current_round)
 
         send(("process_timeout_message", signed_timeout_msg), to=self.validators)
 
@@ -423,12 +429,13 @@ class ReplicaFI(process, Replica):
                 self.exitFlag =  True
                 
             elif config['test_case'] == 'leader_delayed':
-                time.sleep(6)
+                time.sleep(3)
             # attr = "current_round"
             # val = 3
             # setattr(attr, val)
         if M[0] == "process_vote_msg":
-            if config['test_case'] == 'vote_message_dropped':
+            if config['test_case'] == 'crashed_while_voting':
+                print("Exited from here!!!!!!!!!!!!!!!!!!!!!!")
                 self.exitFlag =  True
 
     def receive(msg=('done', "Done")):
