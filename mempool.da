@@ -8,9 +8,9 @@ class Mempool:
 
         self.txnsInBlock = txnsInBlock
 
-    def addTxns(self, txn, client_id):
+    def addTxns(self, txn):
         # self.q.append(newObj)
-        self.q[(txn, client_id)] = "REQUESTED"
+        self.q[txn] = "REQUESTED"
 
     def isEmpty(self):
         for key in self.q.keys():

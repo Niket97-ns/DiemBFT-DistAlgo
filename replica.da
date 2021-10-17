@@ -228,7 +228,8 @@ class Replica(process):
 
     def process_certificate_qc(qc):
         wasCommitted, client = self.blockTree.process_qc(qc)
-        if wasCommitted and client is not None:
+        if wasCommitted and client is not None and client != "":
+            output("Replying to client", client)
 
             # TODO: Tell client
             send(("Reply", ),
@@ -266,7 +267,8 @@ class Replica(process):
 
     def receive(msg=("process_vote_msg", V), from_=c):
         qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
-        if wasCommittedFlag and client is not None:
+        if wasCommittedFlag and client is not None and client != "":
+            output("Replying to client", client)
             send(("Reply", ),
                  to=client)
         if qc != None:
