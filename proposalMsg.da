@@ -1,4 +1,7 @@
 # type: ignore
+import
+
+
 class ProposalMsg():
 
     def __init__(self, sender,  block, last_round_tc, high_commit_qc):

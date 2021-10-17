@@ -8,12 +8,6 @@ def hash(x):
     return x
 
 
-def sign(author, *args):
-
-    s = "~".join(list(args))
-    return author.privateKey.sign(str.encode(s))
-
-
 def sign(key, *args):
     a = tuple(args)
     # s = " ".join(str(e) for e in a)
