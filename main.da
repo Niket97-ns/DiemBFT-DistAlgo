@@ -5,7 +5,6 @@ import client
 import nacl.utils
 from nacl.signing import SigningKey
 import time
-# from test import Test
 
 
 class DiemBFT(process):
@@ -52,27 +51,30 @@ class DiemBFT(process):
         start(clients)
         start(replicasFI)
         await(each(c in clients, has=received(('done',), from_=c)))
-        # await(len(setof(r, received(('done',), from_=c))) == self.numberOfClients)
-        send(('done', "Done",), to=(replicas))
+
+        send(('done', "Done",), to=(replicasFI|replicas))
         
         exit()
 
 def main():
-    config(clock="Lamport")
 
-    # config(channel="fifo")
-    # configs = [{"numberOfClients": 3, "numberOfReplicas": 7,
-    #             "numberOfFaulty": 2, "test_case": "leader_crashed"}, 
-    #             {"numberOfClients": 3, "numberOfReplicas": 7,
-    #             "numberOfFaulty": 2, "test_case": "vote_message_dropped"},
+    # configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
+    #             "numberOfFaulty": 1, "test_case": "leader_crashed"}, 
     #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "crashed_while_voting"}]
+    #             "numberOfFaulty": 1, "test_case": "vote_message_dropped"},
+    #             {"numberOfClients": 1, "numberOfReplicas": 4,
+    #             "numberOfFaulty": 1, "test_case": "crashed_while_voting"},
+    #             {"numberOfClients": 1, "numberOfReplicas": 4,
+    #             "numberOfFaulty": 1, "test_case": "happy_path"},
+    #             {"numberOfClients": 1, "numberOfReplicas": 4,
+    #             "numberOfFaulty": 2, "test_case": "leader_delay"}]
 
     configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "leader_delayed"}]
-
+                "numberOfFaulty": 1, "test_case": "leader_crashed"}]
 
     for config in configs:
+        output("*************************",config['test_case'],"*****************")
+        output("Number of Clients : ",config['numberOfClients']," Number of Replicas:",config['numberOfReplicas'], " Faulty Replicas ",config['numberOfFaulty'] )
         p = new(DiemBFT)
         setup(p, (config,))
         start(p)

@@ -327,6 +327,7 @@ class Replica(process):
 
     def receive(msg=("process_proposal_message", P), from_=r):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
+
         try:
             verifyKeySender.verify(P.message, P.signature)
             P = pickle.loads(P.message)
@@ -423,20 +424,24 @@ class ReplicaFI(process, Replica):
         super().send(M, to)
         # do original send
         # imagine that attr and val were obtained from a misbehavior spec.
-        if M[0] == "process_proposal_message":
-            if config['test_case'] == 'leader_crashed':
-                print("leader crashing")
-                self.exitFlag =  True
-                
-            elif config['test_case'] == 'leader_delayed':
-                time.sleep(3)
-            # attr = "current_round"
-            # val = 3
-            # setattr(attr, val)
-        if M[0] == "process_vote_msg":
-            if config['test_case'] == 'crashed_while_voting':
-                print("Exited from here!!!!!!!!!!!!!!!!!!!!!!")
-                self.exitFlag =  True
+        if config['test_case'] != 'happy_path':
+            if M[0] == "process_proposal_message":
+                if config['test_case'] == 'leader_crashed':
+                    output("leader crashing")
+                    
+                    self.exitFlag =  True
+                    
+                elif config['test_case'] == 'leader_delayed':
+                    time.sleep(3)
+                # attr = "current_round"
+                # val = 3
+                # setattr(attr, val)
+            if M[0] == "process_vote_msg":
+                if config['test_case'] == 'crashed_while_voting':
+                    print("Exited from here!!!!!!!!!!!!!!!!!!!!!!")
+                    self.exitFlag =  True
+                elif config['test_case'] == 'vote_message_dropped':
+                    pass
 
     def receive(msg=('done', "Done")):
         self.doneFlag = True
