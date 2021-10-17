@@ -17,6 +17,7 @@ class Mempool:
         return True
 
     def allCommitted(self):
+        # print(self.q)
         for key in self.q.keys():
             if self.q[key] != "COMMITTED":
                 return False
