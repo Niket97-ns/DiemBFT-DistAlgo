@@ -1,0 +1,39 @@
+[2021-10-17 18:41:00,340] da.transport.manager.TransportManager<MainProcess>:DEBUG: Initializing with key b'\xc8\xd01\xbc\xa0\x86\x16\xbb\xe0a\xbc\xa7Z\r\xe9\x93\xd58\x9f\xb94\x7fV@r\x8f\xcbro\x1bv&'...
+[2021-10-17 18:41:00,340] da.transport.sock.UdpTransport<MainProcess>:DEBUG: Transport initialized at address ('127.0.0.1', 53199)
+[2021-10-17 18:41:00,341] da.transport.sock.TcpTransport<MainProcess>:DEBUG: Transport initialized at address ('127.0.0.1', 28484)
+[2021-10-17 18:41:00,341] da.api<MainProcess>:INFO: <Node_:99001> initialized at 127.0.0.1:(UdpTransport=53199, TcpTransport=28484).
+[2021-10-17 18:41:00,341] da.api<MainProcess>:INFO: Starting program <module 'signing_test' from './signing_test.da'>...
+[2021-10-17 18:41:00,341] da.api<MainProcess>:INFO: Running iteration 1 ...
+[2021-10-17 18:41:00,342] da.transport.manager.TransportManager<MainProcess>:DEBUG: Starting...
+[2021-10-17 18:41:00,342] da.api<MainProcess>:INFO: Waiting for remaining child processes to terminate...(Press "Ctrl-C" to force kill)
+[2021-10-17 18:41:00,343] da.transport.sock.UdpTransport<MainProcess>:DEBUG: Transport started.
+[2021-10-17 18:41:00,343] da.transport.sock.TcpTransport<MainProcess>:DEBUG: Transport started.
+[2021-10-17 18:41:00,344] da.sim.Router<MainProcess>:DEBUG: Process <Node_:99001> registered.
+[2021-10-17 18:41:00,344] da.sim.OSThreadContainer<MainProcess>:DEBUG: Process object initialized.
+[2021-10-17 18:41:00,345] da.api<MainProcess>:INFO: Main process terminated.
+[2021-10-17 18:42:31,579] da.transport.manager.TransportManager<MainProcess>:DEBUG: Initializing with key b'\xa8\xa2\x9d^`\xde\xa9\xc5+\xc4>t\x82\x85\xfa\xd8\\\xf6\x92\xb6h\xd0<]\x9a\x80\xb0\xe3\x0b\xdd\xa8x'...
+[2021-10-17 18:42:31,579] da.transport.sock.UdpTransport<MainProcess>:DEBUG: Transport initialized at address ('127.0.0.1', 31880)
+[2021-10-17 18:42:31,580] da.transport.sock.TcpTransport<MainProcess>:DEBUG: Transport initialized at address ('127.0.0.1', 54349)
+[2021-10-17 18:42:31,580] da.api<MainProcess>:INFO: <Node_:62801> initialized at 127.0.0.1:(UdpTransport=31880, TcpTransport=54349).
+[2021-10-17 18:42:31,580] da.api<MainProcess>:INFO: Starting program <module 'signing_test' from './signing_test.da'>...
+[2021-10-17 18:42:31,581] da.api<MainProcess>:INFO: Running iteration 1 ...
+[2021-10-17 18:42:31,581] da.transport.manager.TransportManager<MainProcess>:DEBUG: Starting...
+[2021-10-17 18:42:31,582] da.api<MainProcess>:INFO: Waiting for remaining child processes to terminate...(Press "Ctrl-C" to force kill)
+[2021-10-17 18:42:31,582] da.transport.sock.UdpTransport<MainProcess>:DEBUG: Transport started.
+[2021-10-17 18:42:31,583] da.transport.sock.TcpTransport<MainProcess>:DEBUG: Transport started.
+[2021-10-17 18:42:31,584] da.sim.Router<MainProcess>:DEBUG: Process <Node_:62801> registered.
+[2021-10-17 18:42:31,584] da.sim.OSThreadContainer<MainProcess>:DEBUG: Process object initialized.
+[2021-10-17 18:42:31,585] da.api<MainProcess>:INFO: Main process terminated.
+[2021-10-17 18:55:56,989] da.transport.manager.TransportManager<MainProcess>:DEBUG: Initializing with key b'\xa5}U\x1b\xa3\xd1\x9d\\\xccUf%\xc9\xf7=\x03\xe6\xe42+\x18\xc03\xf42\xa8Y\x9fj\x81\xf8i'...
+[2021-10-17 18:55:56,990] da.transport.sock.UdpTransport<MainProcess>:DEBUG: Transport initialized at address ('127.0.0.1', 24803)
+[2021-10-17 18:55:56,991] da.transport.sock.TcpTransport<MainProcess>:DEBUG: Transport initialized at address ('127.0.0.1', 24865)
+[2021-10-17 18:55:56,991] da.api<MainProcess>:INFO: <Node_:0a401> initialized at 127.0.0.1:(UdpTransport=24803, TcpTransport=24865).
+[2021-10-17 18:55:56,991] da.api<MainProcess>:INFO: Starting program <module 'signing_test' from './signing_test.da'>...
+[2021-10-17 18:55:56,991] da.api<MainProcess>:INFO: Running iteration 1 ...
+[2021-10-17 18:55:56,992] da.transport.manager.TransportManager<MainProcess>:DEBUG: Starting...
+[2021-10-17 18:55:56,992] da.api<MainProcess>:INFO: Waiting for remaining child processes to terminate...(Press "Ctrl-C" to force kill)
+[2021-10-17 18:55:56,993] da.transport.sock.UdpTransport<MainProcess>:DEBUG: Transport started.
+[2021-10-17 18:55:56,994] da.transport.sock.TcpTransport<MainProcess>:DEBUG: Transport started.
+[2021-10-17 18:55:56,994] da.sim.Router<MainProcess>:DEBUG: Process <Node_:0a401> registered.
+[2021-10-17 18:55:56,995] da.sim.OSThreadContainer<MainProcess>:DEBUG: Process object initialized.
+[2021-10-17 18:55:56,996] da.api<MainProcess>:INFO: Main process terminated.

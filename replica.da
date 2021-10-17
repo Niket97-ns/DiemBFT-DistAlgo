@@ -262,24 +262,25 @@ class Replica(process):
         wasCommitted, client = self.blockTree.process_qc(qc)
 
         if wasCommitted and client is not None and client != "":
+            output("******* SENDING ACKNOWLEDGEMENT TO ", c)
+
             send(('Reply', self), to=client)
 
         self.Leader_update_leaders(qc)
-        # TODO: Check paper : Code invalid
         self.Pacemaker_advance_round_qc(qc)
 
     def process_new_round_event(last_tc):
         # Not sure what they are trying to check
         # TODO: Check code, change to get_leader and self.pacemaker.curr_round
         if self == self.Leader_get_leader(self.pacemaker_current_round):
-            output("I am leader of round", self.pacemaker_current_round)
+            output("LEADER ELECTED FOR ROUND ",
+                   self.pacemaker_current_round, " = ", self)
             next_transaction = self.mempool.get_requested_transaction()
-            output("My proposed transaction", next_transaction)
+            output("PROPOSED TRANSACTION FOR ROUND ",
+                   self.pacemaker_current_round, " = ", next_transaction)
             if next_transaction is None:
-                # TODO: Return till timeout
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, ("", ""))
-                # TODO: Handle this
                 new_proposal = ProposalMsg(
                     b, last_tc, self.blockTree.high_commit_qc, self.safety)
                 signed_proposal = self.safety.sign(new_proposal)
@@ -289,17 +290,19 @@ class Replica(process):
             else:
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, next_transaction)
-                # TODO: Handle this
                 new_proposal = ProposalMsg(
                     b, last_tc, self.blockTree.high_commit_qc, self.safety)
                 signed_proposal = self.safety.sign(new_proposal)
                 send(("process_proposal_message", signed_proposal),
                      to=self.validators)
-
+            output("BROADCASTING PROPOSAL FOR ROUND ",
+                   self.pacemaker_current_round)
     # I am confused if this is the same vote handler
     # because the sequence of these proceders in the papaer is different
 
     def receive(msg=("process_vote_msg", V), from_=c):
+        output(" Received vote message from  ", c, " FOR ROUND ",
+               self.pacemaker_current_round, " ----------")
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
         try:
             verifyKeySender.verify(V.message, V.signature)
@@ -307,19 +310,25 @@ class Replica(process):
             V = V[0]
             qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
             if wasCommittedFlag and client is not None and client != "":
-
+                output("******* SENDING ACKNOWLEDGEMENT TO ", c)
                 send(('Reply', self), to=client)
 
             if qc != None:
+                output("******* QC GENERATED FOR ROUND ",
+                       self.pacemaker_current_round, " *******")
                 self.process_certificate_qc(qc)
                 # self.max_time = max(self.max_time, time.time() - self.start)
                 # print("@@@@@@@@@@@@@@@@@ ",self.max_time," @@@@@@@@@@@@@@@@")
                 # self.start = time.time()
                 self.process_new_round_event(None)
         except:
-            pass     
+            output("!!!!!!!!! UNABLE TO VERIFY VOTE FROM ", c, " FOR ROUND ",
+                   self.pacemaker_current_round, " !!!!!!!!!")
+            pass
 
     def receive(msg=("process_proposal_message", P), from_=r):
+        output("---------- RECEIVED PROPOSAL MESSAGE FROM ", r, " FOR ROUND ",
+               self.pacemaker_current_round, " ----------")
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
         try:
             verifyKeySender.verify(P.message, P.signature)
@@ -335,13 +344,13 @@ class Replica(process):
             # need to confirm the data type of leader variable
             # output(P.block.payload)
 
-            # TODO: SYNC Up
-            send(("Sync_me", "I am behind"),
-                 to=self.validators)
+            # # TODO: SYNC Up
+            # send(("Sync_me", "I am behind"),
+            #      to=self.validators)
 
             if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
-                if P.block.round > round:
-                    pass
+                # if P.block.round > round:
+                #     pass
                 return None
 
             self.blockTree.execute_and_insert(P.block)
@@ -355,20 +364,24 @@ class Replica(process):
                     self.mempool.make_transaction_pending(P.block.payload)
 
                 signed_vote_msg = self.safety.sign(vote_msg)
+                output("sending vote to ", r, " FOR ROUND ",
+                       self.pacemaker_current_round)
                 send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
         except:
+            output("!!!!!!!!! UNABLE TO VERIFY PROPOSAL FROM ", r, " FOR ROUND ",
+                   self.pacemaker_current_round, " !!!!!!!!!")
             pass
 
     def receive(msg=("Sync_me", "I am behind"), from_=r):
-        all_data = (self.ledger.committed_ledger_tree,
-                    self.ledger.pending_ledger_tree,
-                    self.blockTree.high_commit_qc,
+        print(open(self.ledger.fileName, "r"))
+        all_data = (self.blockTree.high_commit_qc,
                     self.blockTree.high_qc,
-                    self.blockTree.pending_block_tree,
-                    self.pacemaker_last_round_tc)
-        # signed_vote_msg = self.safety.sign(all_data)
-        digest = util.createDigest(pickle.dumps(all_data))
 
+                    # self.blockTree.pending_block_tree,
+                    self.pacemaker_last_round_tc,
+                    )
+
+        digest = util.createDigest(pickle.dumps(all_data))
         send(("present_data", pickle.dumps(all_data), digest), to=r)
 
     def receive(msg=("present_data", sent_data, digest), from_=r):
@@ -386,9 +399,14 @@ class Replica(process):
             if len(self.sync_up[digest]) >= self.f + 1:
                 # P = pickle.loads(digest)
                 sent_data = pickle.loads(sent_data)
+                self.blockTree.high_commit_qc = sent_data[0]
+                self.blockTree.high_qc = sent_data[1]
+                self.pacemaker_last_round_tc = sent_data[2]
+                # fileContents = sent_data[3]
+                # print(fileContents)
 
                 # P = P[0]
-                output("I got data from all")
+                # output("I got data from all")
 
     def receive(msg=("process_timeout_message", T), from_=c):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
@@ -401,7 +419,8 @@ class Replica(process):
             self.Pacemaker_advance_round_tc(T.last_round_tc)
             tc = self.Pacemaker_process_remote_timeout(T)
             if tc != None:
-                # output("TC generated for round ", self.pacemaker_current_round)
+                output("!!!!!! TIMEOUT GENERATED FOR ROUND ",
+                       self.pacemaker_current_round, " !!!!!!!!!")
                 self.Pacemaker_advance_round_tc(tc)
                 self.process_new_round_event(tc)
         except:
@@ -409,9 +428,13 @@ class Replica(process):
 
     # receive handler for client requests
     def receive(msg=('Request', request, message_to_hash, digest), from_=c):
+        output("******** RECEIVED REQUEST ",
+               request, " FROM ", c, "***********")
         request_tuple = (request, c)
         if util.checkDigest(message_to_hash, digest):
             if request_tuple in self.ledger.commit_cache:
+                output("******* SENDING ACKNOWLEDGEMENT TO ", c,
+                       " FOR REQUEST ", request, "***********")
                 send(('Reply', self), to=c)
                 return
             self.mempool.addTxns(request_tuple)
@@ -421,6 +444,7 @@ class Replica(process):
         self.doneFlag = True
 
     def run():
+        output(self, " process started ")
         process_new_round_event(self.last_tc)
         while True:
             if await(self.doneFlag and self.mempool.allCommitted()):
@@ -429,7 +453,7 @@ class Replica(process):
                 self.proposalMsgFlag = False
             elif timeout(self.one_round_time_timeout):
                 Pacemaker_local_timeout_round()
-        output("Replica closing")
+        output(self, " process exiting ")
         exit()
 
 
@@ -440,7 +464,6 @@ class ReplicaFI(process, Replica):
         self.exitFlag = False
         # print("In setup")
 
-    
     def send(M, to):
         super().send(M, to)
         # do original send
@@ -448,21 +471,20 @@ class ReplicaFI(process, Replica):
         if M[0] == "process_proposal_message":
             if config['test_case'] == 'leader_crashed':
                 print("leader crashing")
-                self.exitFlag =  True
-                
+                self.exitFlag = True
+
             elif config['test_case'] == 'leader_delayed':
                 time.sleep(6)
-            # attr = "current_round"
-            # val = 3
-            # setattr(attr, val)
+
         if M[0] == "process_vote_msg":
             if config['test_case'] == 'vote_message_dropped':
-                self.exitFlag =  True
+                self.exitFlag = True
 
     def receive(msg=('done', "Done")):
         self.doneFlag = True
 
     def run():
+        output(self, " process started ")
         process_new_round_event(self.last_tc)
         while True:
             if await(self.exitFlag):
@@ -472,9 +494,7 @@ class ReplicaFI(process, Replica):
                 break
             elif await(self.proposalMsgFlag):
                 self.proposalMsgFlag = False
-            
-            
+
             elif timeout(self.one_round_time_timeout):
                 Pacemaker_local_timeout_round()
-        # print("----------")
-        
+        output(self, " process exiting ")

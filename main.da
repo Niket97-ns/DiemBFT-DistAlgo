@@ -46,7 +46,7 @@ class DiemBFT(process):
 
         for c in clients:
             setup(c, (privateKeyMap[c], clientPublicKeyMap,
-                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 10, 2, 25,))
+                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 5, 2, 25,))
 
         start(replicas)
         start(clients)

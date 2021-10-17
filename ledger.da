@@ -40,6 +40,7 @@ class Ledger:
         self.mempool = mempool
         self.author = author
         self.fileName = str(self.author)+".txt"
+        # self.file = open(self.fileName, "w")
         # self.ledger_file = open(self.fileName, "w+")
         self.pending_ledger_tree = LedgerTree()
         self.committed_ledger_tree = LedgerTree()

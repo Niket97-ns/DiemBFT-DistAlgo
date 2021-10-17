@@ -26,9 +26,8 @@ class Client(process):
         # self.sequence_number = 1    # Sequence number to uniquely identify request
         self.committed_requests = set()  # Check for requests already committed
 
-
     def run():
-
+        output(self, " process started ")
         while self.request_number <= self.number_of_requests:
             time.sleep(self.delay)
             self.delay = set_initial_delay()
@@ -42,11 +41,14 @@ class Client(process):
 
             if await(len(setof(r, received(('Reply', _), from_=r))) > self.f + 1):
                 self.request_number += 1
-                output("Receved at client side ***********")
+                output(self, " received acknowledgment for ", request)
                 reset(received)
             elif timeout(6):
-                output("timed out, sending again.")
+                output("TIMED OUT FOR REQUEST ", request, "!! RETRANSMITTING")
         send(('done',), to=parent())
+
+        output(self, " process exiting ")
+
         exit()
 
     def set_initial_delay():
