@@ -5,6 +5,9 @@ import client
 import nacl.utils
 from nacl.signing import SigningKey
 import time
+import json
+
+CONFIG_FILE_NAME = "test_case_config.json"
 
 
 class DiemBFT(process):
@@ -57,26 +60,17 @@ class DiemBFT(process):
         exit()
 
 def main():
+    with open(CONFIG_FILE_NAME, 'r') as reader:
+        configStr = reader.read()
+        configs = json.loads(configStr)
+        for config in configs:
+            output("*************************",config['test_case'],"*****************")
+            output("Number of Clients : ",config['numberOfClients']," Number of Replicas:",config['numberOfReplicas'], " Faulty Replicas ",config['numberOfFaulty'] )
+            p = new(DiemBFT)
+            setup(p, (config,))
+            start(p)
 
-    configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "leader_crashed"}, 
-                {"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "vote_message_dropped"},
-                {"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "crashed_while_voting"},
-                {"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "happy_path"},
-                {"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 2, "test_case": "leader_delayed"}]
-
-    configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "happy_path"}]
-
-    for config in configs:
-        output("*************************",config['test_case'],"*****************")
-        output("Number of Clients : ",config['numberOfClients']," Number of Replicas:",config['numberOfReplicas'], " Faulty Replicas ",config['numberOfFaulty'] )
-        p = new(DiemBFT)
-        setup(p, (config,))
-        start(p)
-
+        # output("Error reading test case configuration")
     exit()
+    
+
