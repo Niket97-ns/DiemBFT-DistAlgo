@@ -3,11 +3,6 @@
 class TC():
 
     def __init__(self, round=None, tmo_high_qc_rounds=None, tmo_signatures=None):
-        # All timeout messages that form TC have the same round
-        self.round = round
-        # A vector of 2f+1 high qc round numbers
-        # of timeout messages that form TC.
-        self.tmo_high_qc_rounds = tmo_high_qc_rounds
-        # A vector of 2f+1 validator signatures
-        # on (round, respective high qc round)
-        self.tmo_signatures = tmo_signatures
+        self.round = round   # All timeout messages that form TC have the same round
+        self.tmo_high_qc_rounds = tmo_high_qc_rounds   # A vector of 2f + 1 high qc round numbers of timeout messages that form TC
+        self.tmo_signatures = tmo_signatures   # A vector of 2f + 1 validator signatures on (round, respective high qc round)

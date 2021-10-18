@@ -17,10 +17,9 @@ class Safety():
         self.author = author
         self.ledger = ledger
         self.blockTree = blockTree
-        # private key of replica using the safety object.
-        self.private_key = private_key
-        self.public_keys = public_keys
-        self.highest_vote_round = highest_vote_round
+        self.private_key = private_key   # Own private key, ie. private key of replica using the safety object
+        self.public_keys = public_keys   # Public keys of all validators
+        self.highest_vote_round = highest_vote_round   # initially 0
         self.highest_qc_round = highest_qc_round
 
     def valid_signatures(self, quorum, round=None, highqc_voteinfo_round=None):
@@ -39,33 +38,63 @@ class Safety():
                     return False
         return True
 
+    #### Safety : Private
+    
+    '''
+        Pseudocode in Paper:
+        # commit not to vote in rounds lower than round
+        highest_vote_round <- max(qc_round, highest_vote_round)
+    '''
     def __increase_highest_vote_round(self, round):
         if self.highest_vote_round is not None and round is not None:
             self.highest_vote_round = max(self.highest_vote_round, round)
         elif round is not None:
             self.highest_vote_round = round
 
+
+    '''
+        Pseudocode in Paper:
+        highest_qc_round <- max(qc_round, highest_qc_round)
+    '''
     def __update_highest_qc_round(self, qc_round):
         if self.highest_qc_round is not None and qc_round is not None:
             self.highest_qc_round = max(self.highest_qc_round, qc_round)
         elif qc_round is not None:
             self.highest_qc_round = qc_round
 
+
+    '''
+        Pseudocode in Paper:
+        return round + 1 = block_round
+    '''
     def __consecutive(self, block_round, round):
         '''
         Checks if round is followed by block_round
         '''
         if round is None:
             return True
-
         return round+1 == block_round
-    # TODO: VERIFY IN END
 
+
+    '''
+        Pseudocode in Paper:
+        return consecutive(block_round, tc.round) and qc_round >= max{tc.tmo_high_qc_rounds}
+    '''
     def __safe_to_extend(self, block_round, qc_round, tc):
         if tc is None:
             return True
         return self.__consecutive(block_round, tc.round) and qc_round >= max(tc.tmo_high_qc_rounds)
 
+
+    '''
+        Pseudocode in Paper:
+        if block_round <= max{highest_vote_round, qc_round} then
+            // 1. must vote in monotonically increasing rounds
+            // 2. must extend a smaller round
+            return false
+            // Extending qc from previous round or safe to extend due to tc
+        return consecutive(block_round, qc_round) or safe_to_extend(block_round, qc_round, tc)
+    '''
     def __safe_to_vote(self, block_round, qc_round, tc):
 
         if qc_round is not None and self.highest_vote_round is not None and block_round <= max(self.highest_vote_round, qc_round):
@@ -75,6 +104,15 @@ class Safety():
         # Extending qc round from previous round or safe to extend due to tc
         return self.__consecutive(block_round, qc_round) or self.__safe_to_extend(block_round, qc_round, tc)
 
+
+    '''
+        Pseudocode in Paper:
+        if qc_round < highest_qc_round or round <= max{highest_vote_round - 1, qc_round} then
+            // respect highest qc round and don't timeout in a past round
+            return false
+        // qc or tc must allow entering the round to timeout
+        return consecutive(round, qc_round) or consecutive(round, tc_round)
+    '''
     def __safe_to_timeout(self, round, qc_round, tc):
         if qc_round is None or self.highest_qc_round is None or self.highest_vote_round is None:
             return True
@@ -88,6 +126,15 @@ class Safety():
         else:
             return self.__consecutive(round, qc_round) or self.__consecutive(round, tc.round)
 
+
+    '''
+        Pseudocode in Paper:
+        // find the committed id in case a qc is formed in the vote round
+        if consecutive(block_round, qc.vote_info.round) then
+            return Ledger.pending_state(qc.id)
+        else
+            return None
+    '''
     def __commit_state_id_candidate(self, block_round, qc):
         # Find the committed id in case a qc is formed in a vote round
         if qc is not None and self.__consecutive(block_round, qc.vote_info.round):
@@ -95,6 +142,29 @@ class Safety():
         else:
             return None
 
+
+    #### Safety : Public
+
+    '''
+        Pseudocode in Paper:
+        qc_round <- b.qc.vote_info.round
+        if valid_signatures(b, last_tc) and safe_to_vote(b.round; qc_round, last_tc) then
+            update_highest_qc_round(qc_round) // Protect qc round
+            increase_highest_vote_round(b.round) // Don't vote again in this (or lower) round
+            
+            // VoteInfo carries the potential QC info with ids and rounds of the parent QC
+            vote_info <- VoteInfo (
+                (id, round) <- (b.id, b.round),
+                (parent_id, parent_round) <- (b.qc.vote_info.id, qc_round),
+                exec_state_id <- Ledger.pending_state(b.id) )
+            
+            ledger_commit_info <- LedgerCommitInfo (
+                commit_state_id <- commit_state_id_candidate(b.round, b.qc),
+                vote_info_hash <- hash(vote_info) )
+
+            return VoteMsg(vote_info, ledger_commit_info, Block-Tree.high_commit_qc)
+        return None
+    '''
     def make_vote(self, b, last_tc):
         if b.qc is None:
             qc_round = None
@@ -109,7 +179,6 @@ class Safety():
             valid_signatures_check = False
 
         if valid_signatures_check and self.__safe_to_vote(b.round, qc_round, last_tc):
-            # if valid_signatures(b, last_tc) and self.__safe_to_vote(b.round, qc_round, last_tc):
             self.__update_highest_qc_round(qc_round)    # Protect qc round
             # Don't vote again in this or lower round
             self.__increase_highest_vote_round(b.round)
@@ -134,6 +203,15 @@ class Safety():
 
         return None
 
+
+    '''
+        Pseudocode in Paper:
+        qc_round <- high_qc.vote_info.round;
+        if valid_signatures(high_qc, last_tc) and safe_to_timeout(round, qc_round, last_tc) then
+            increase_highest_vote_round(round) // Stop voting for round
+            return TimeoutInfo(round, high_qc)
+        return None
+    '''
     def make_timeout(self, author, privateKey, round, high_qc, last_tc):
         if high_qc is None:
             qc_round = None
@@ -147,11 +225,8 @@ class Safety():
         if last_tc is not None and not self.valid_signatures(last_tc.tmo_signatures):
             valid_signatures_check = False
 
-        # if True:
         if valid_signatures_check and self.__safe_to_timeout(round, qc_round, last_tc):
-            # if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
             self.__increase_highest_vote_round(round)  # stop voting for round
-            # TODO: Develop Timeout Info
             return TimeOutInfo(author, privateKey, round, high_qc)
         return None
 

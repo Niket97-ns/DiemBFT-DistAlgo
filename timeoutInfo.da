@@ -8,9 +8,9 @@ class TimeOutInfo():
     def __init__(self, sender, privateKey, round, high_qc):
         self.round = round
         self.high_qc = high_qc
-        self.sender = sender
+        self.sender = sender   # Added automatically when constructed
         if high_qc is None or high_qc.vote_info is None or high_qc.vote_info.round is None:
-            self.signature = util.sign(privateKey, round, None)
+            self.signature = util.sign(privateKey, round, None)   # Signed automatically when constructed
         else:
             self.signature = util.sign(
-                privateKey, round, high_qc.vote_info.round)
+                privateKey, round, high_qc.vote_info.round)   # Signed automatically when constructed

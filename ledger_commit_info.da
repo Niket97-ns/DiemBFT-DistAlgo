@@ -2,9 +2,10 @@
 import util
 from util import createConcatString
 
-
+'''
+    speculated new committed state to vote directly on
+'''
 class LedgerCommitInfo:
-    # TODO: take care of commit_state_id default value
     def __init__(self,  vote_info, commit_state_id=None) -> None:
-        self.commit_state_id = commit_state_id
-        self.vote_info_hash = vote_info
+        self.commit_state_id = commit_state_id  # None if no commit happens when this vote is aggregated to QC
+        self.vote_info_hash = vote_info    # Hash of VoteMsg:vote info

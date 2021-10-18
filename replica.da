@@ -25,8 +25,8 @@ import traceback
 class ProposalMsg:
     def __init__(self, block, last_tc, high_commit_qc, safety):
         self.block = block
-        self.last_tc = last_tc
-        self.high_commit_qc = high_commit_qc
+        self.last_tc = last_tc   # TC for block.round - 1 if block.qc.vote_info.round != block.round - 1, else None
+        self.high_commit_qc = high_commit_qc   # QC to synchronize on committed blocks
         self.signature = safety.sign(self.block.id)
 
 
@@ -72,9 +72,9 @@ class Replica(process):
         # --------------- End Initializing block tree ---------- #
 
         # -------------- start pacemaker attribute initialization ------------ #
-        self.pacemaker_current_round = 1
-        self.pacemaker_pending_timeouts = {}
-        self.pacemaker_last_round_tc = None
+        self.pacemaker_current_round = 1    # Initially zero
+        self.pacemaker_pending_timeouts = {}    # Timeouts per round^a
+        self.pacemaker_last_round_tc = None   # Initially None
         # self.pacemaker_last_round_tc = None
         self.pacemaker_local_time = 4
         # -------------- end pacemaker attribute initialization -------------- #
@@ -110,12 +110,24 @@ class Replica(process):
     def Pacemaker_stop_timer(round):
         pass
 
+
+    '''
+        Pseudocode in Paper:
+        return round timer formula
+    '''
     def Pacemaker_get_round_timer(round):
         random.seed(round)
         return random.randint(0, 8)
         # TODO: need to understand this formula for round_timer
         # return round_time(round)
 
+
+    '''
+        Pseudocode in Paper:
+        stop_timer(current_round)
+        current_round <- new_round
+        start_local_timer for round current_round for duration get_round_timer(current_round)
+    '''
     def Pacemaker_start_timer(new_round):
         self.Pacemaker_stop_timer(self.pacemaker_current_round)
         self.proposalMsgFlag = True
@@ -124,6 +136,13 @@ class Replica(process):
         self.Pacemaker_local_time = Pacemaker_get_round_timer(
             self.pacemaker_current_round)
 
+
+    '''
+        Pseudocode in Paper:
+        save_consensus_state()
+        timeout_info <- Safety.make_timeout(current_round, Block-Tree.high_qc, last_round_tc)
+        broadcast TimeoutMsg(timeout_info, last_round_tc, Block-Tree.high_commit_qc)
+    '''
     def Pacemaker_local_timeout_round():
 
         timeoutInfo = self.safety.make_timeout(
@@ -134,6 +153,25 @@ class Replica(process):
 
         send(("process_timeout_message", signed_timeout_msg), to=self.validators)
 
+
+    '''
+        Pseudocode in Paper:
+        tmo_info <- tmo.tmo_info
+        if tmo_info.round < current_round then
+            return None
+        if tmo_info.sender doesnt belong to pending_timeouts[tmo_info.round].senders then
+            pending_timeouts[tmo_info.round] <- pending_timeouts[tmo_info:round] union {tmo_info}
+        if |pending_timeouts[tmo_info.round].senders| == f + 1 then
+            stop_timer(current_round)
+            local_timeout_round() // Bracha timeout
+        if |pending_timeouts[tmo_info.round].senders| == 2f + 1 then
+            return TC (
+                round <- tmo_info.round,
+                tmo_high_qc_rounds <- {t.high_qc.round | t belongsTo pending_timeouts[tmo_info.round]},
+                signatures <- {t.signature | t belongsTo pending_timeouts[tmo_info.round]})
+                )
+        return None
+    '''
     def Pacemaker_process_remote_timeout(tmo):
         tmo_info = tmo.tmo_info
 
@@ -171,17 +209,31 @@ class Replica(process):
                 tmo_signatures_list.append((t.sender, t.signature))
             return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_high_qc_rounds_list)
 
+
+    '''
+        Pseudocode in Paper:
+        if tc = None or tc.round < current_round then
+            return false
+        last_round_tc <- tc
+        start_timer(tc.round + 1)
+        return true
+    '''
     def Pacemaker_advance_round_tc(tc):
         if tc == None or tc.round < self.pacemaker_current_round:
             return False
         self.pacemaker_last_round_tc = tc
-        # self.last_tc = tc
-        # self.last_round_tc = tc
-        # output(" TC generated for round ",
-        #        tc.round+1)
         self.Pacemaker_start_timer(tc.round + 1)
         return True
 
+
+    '''
+        Pseudocode in Paper:
+        if qc.vote_info.round < current_round then
+            return false
+        last_round_tc <- None
+        start_timer(qc.vote_info.round + 1)
+        return true
+    '''
     def Pacemaker_advance_round_qc(qc):
         # TODO: Check again important
         if qc is None:
@@ -191,29 +243,36 @@ class Replica(process):
         elif qc.vote_info.round < self.pacemaker_current_round:
             return False
         self.pacemaker_last_round_tc = None
-        # self.last_tc = None
-        # self.last_round_tc = None
-
         self.Pacemaker_start_timer(qc.vote_info.round + 1)
 
-        # return True
-
-        # tmo_info = tmo.tmo_info
-        # if tmo_info.round < self.pacemaker_current_round:
-        #     return None
-        # if tmo_info.sender not in pending_timeouts[tmo_info.round].senders:
-        #     # pending_timeouts[tmo_info.round]
-        #     len(pending_timeouts[tmo_info.round].senders) == self.f+1
 
     #################################################################
     ############## End Pacemaker Function Definitions #############
 
+
     #################################################################
     ############## Start LeaderElection Function Definitions #############
 
+    '''
+        Pseudocode in Paper:
+        active validators <- {} ; // validators that signed the last window size committed blocks
+        last authors <- {} ; // ordered set of authors of last exclude size committed blocks
+        current qc <- qc
+        for i = 0; i < window_size or |last_authors| < exclude_size; i <- i + 1 do
+            current_block <- Ledger.committed_block(current_qc.vote_info.parent_id)
+            block_author <- current_block.author
+            if i < window_size then
+                active_validators <- active_validators union current_qc.signatures.signers()
+                // |current_qc.signatures.signers()| >= 2f + 1
+            if |last_authors| < exclude_size then
+                last_authors <- last_authors union {block_author}
+            current_qc <- current_block.qc
+        active_validators <- active_validators \ last_authors // contains at least 1 validator
+        return active_validators.pick_one(seed <- qc.voteinfo.round)
+    '''
     def Leader_elect_reputation_leader(qc):
-        active_validators = set()
-        last_authors = set()
+        active_validators = set()   # validators that signed the last window size committed blocks
+        last_authors = set()   # ordered set of authors of last exclude size committed blocks
         current_qc = qc
         i = 0
 
@@ -259,14 +318,27 @@ class Replica(process):
         idx = (curr_round) % len(self.validators)
         return self.validators[idx]
 
-    def Leader_get_leader(round):
-        # TODO: IDK
 
+    '''
+        Pseudocode in Paper:
+        if (round, leader) belongsTo reputation_leaders then
+            return leader // Reputation-based leader
+        return validators[floor(round/2) mod |validators|] // Round-robin leader (two rounds per leader)
+    '''
+    def Leader_get_leader(round):
         if round in self.reputation_leaders:
             return self.reputation_leaders[round]
-
         return self.Leader_get_round_robin_leader(round)
 
+
+    '''
+        Pseudocode in Paper:
+        extended_round <- qc.vote_info.parent_round
+        qc.round <- qc.vote_info.round
+        current_round <- PaceMaker.current_round
+        if extended_round + 1 = qc_round and qc_round + 1 = current_round then
+            reputation_leaders[current_round + 1] <- elect_reputation_leader(qc)
+    '''
     def Leader_update_leaders(qc):
         if qc is not None:
             if qc.vote_info is not None:
@@ -299,6 +371,13 @@ class Replica(process):
     #################################################################
     ############## End LeaderElection Function Definitions #############
 
+
+    '''
+        Pseudocode in Paper:
+        Block-Tree.process_qc(qc)
+        LeaderElection.update_leaders(qc)
+        Pacemaker.advance_round(qc.vote_info.round)
+    '''
     def process_certificate_qc(qc):
         wasCommitted, client = self.blockTree.process_qc(qc)
         if wasCommitted and client is not None and client != "":
@@ -309,6 +388,13 @@ class Replica(process):
 
         self.Pacemaker_advance_round_qc(qc)
 
+    '''
+        Pseudocode in Paper:
+        if u = LeaderElection.get_leader(Pacemaker.current_round) then
+            // Leader code: generate proposal.
+            b <- Block-Tree:generate_block(MemPool.get_transactions(), Pacemaker.current_round)
+            broadcast ProposalMsg(b, last_tc, Block-Tree.high_commit_qc)
+    '''
     def process_new_round_event(last_tc):
         # Not sure what they are trying to check
         # TODO: Check code, change to get_leader and self.pacemaker.curr_round
@@ -352,6 +438,14 @@ class Replica(process):
     # I am confused if this is the same vote handler
     # because the sequence of these proceders in the papaer is different
 
+
+    '''
+        Pseudocode in Paper:
+        qc <- Block-Tree.process_vote(M)
+        if qc != None then
+            process_certificate_qc(qc)
+            process_new_round_event(None)
+    '''
     def receive(msg=("process_vote_msg", V), from_=c):
         # output(" Received vote message from  ", c, " FOR ROUND ",
         #    self.pacemaker_current_round, " ----------")
@@ -383,6 +477,20 @@ class Replica(process):
                    self.pacemaker_current_round, " !!!!!!!!!")
             pass
 
+    '''
+        Pseudocode in Paper:
+        process_certificate_qc(P.block.qc)
+        process_certificate_qc(P.high_commit_qc)
+        Pacemaker.advance_round_tc(P.last_round_tc)
+        round <- Pacemaker.current_round
+        leader <- LeaderElection.get_leader(current_round)
+        if P.block.round != round or P.sender != leader or P.block.author != leader then
+            return
+        Block-Tree.execute_and_insert(P) // Adds a new speculative state to the Ledger
+        vote_msg <- Safety:make_vote(P.block; P.last_round_tc)
+        if vote_msg != None then
+            send vote_msg to LeaderElection.get_leader(current_round + 1)
+    '''
     def receive(msg=("process_proposal_message", P), from_=r):
         # output("---------- RECEIVED PROPOSAL MESSAGE FROM ", r, " FOR ROUND ",
         #        self.pacemaker_current_round, " ----------")
@@ -464,6 +572,17 @@ class Replica(process):
                 # P = P[0]
                 # output("I got data from all")
 
+
+    '''
+        Pseudocode in Paper:
+        process_certificate_qc(M.tmo_info.high_qc)
+        process_certificate_qc(M.high_commit_qc)
+        Pacemaker.advance_round_tc(M.last_round_tc)
+        tc <- Pacemaker.process_remote_timeout(M)
+        if tc != None then
+            Pacemaker.advance_round(tc)
+            process_new_round_event(tc)
+    '''
     def receive(msg=("process_timeout_message", T), from_=c):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
         try:
