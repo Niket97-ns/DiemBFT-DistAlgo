@@ -2,7 +2,6 @@
 
 from vote_info import VoteInfo
 from ledger_commit_info import LedgerCommitInfo
-from util import valid_signatures, createDigest, createConcatString
 from vote_msg import VoteMsg
 import block_tree as bt
 from timeoutInfo import TimeOutInfo

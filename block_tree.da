@@ -65,18 +65,11 @@ class BlockTree:
         vote_info = VoteInfo()
         ledger_commit_info = LedgerCommitInfo(vote_info=vote_info)
 
-        # self.high_qc = QC(vote_info=vote_info,
-        #   ledger_commit_info=ledger_commit_info)
-        # self.high_commit_qc = QC(
-        #     vote_info=vote_info, ledger_commit_info=ledger_commit_info)
         self.high_qc = None
         self.high_commit_qc = None
         self.f = f
 
-        # TODO: need to create a tree structure somehow
         self.pending_block_tree = PendingBlockTree()
-
-        # TODO: dictonary for now
         self.pending_votes = {}
         self.ledger = ledger
         self.author = author

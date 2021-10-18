@@ -1,10 +1,8 @@
 # type: ignore
 class VoteInfo:
-    # better default values for initialization.
-    # TODO: Take care of default values
     def __init__(self, id=0, round=None, parent_id=-1, parent_round=None, exec_state_id=None) -> None:
         self.id = id
         self.round = round
         self.parent_id = parent_id
         self.parent_round = parent_round
-        self.exec_state_id = exec_state_id    # Object not yet created
+        self.exec_state_id = exec_state_id

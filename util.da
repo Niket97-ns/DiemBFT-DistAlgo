@@ -4,10 +4,6 @@ import nacl.hash
 import pickle
 
 
-def hash(x):
-    return x
-
-
 def sign(key, *args):
     a = tuple(args)
     # s = " ".join(str(e) for e in a)
@@ -36,5 +32,3 @@ def createConcatString(*args):
     return pickle.dumps(a)
 
 
-def valid_signatures(block, last_tc):
-    return True
