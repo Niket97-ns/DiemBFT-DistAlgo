@@ -68,7 +68,7 @@ def main():
         if len(sys.argv) == 2:
             config = configs[sys.argv[1]]
             output("*************************",config['test_case'],"*****************")
-            output("Number of Clients : ",config['numberOfClients']," Number of Replicas:",config['numberOfReplicas'], " Faulty Replicas ",config['numberOfFaulty'] )
+            output("Number of Clients : ", config['numberOfClients'], " Number of Replicas : ", config['numberOfReplicas'], " Faulty Replicas: ", config['numberOfFaulty'], " seed: ", config['seed'], " Client_max_load :", config["Client_max_load"] )
             p = new(DiemBFT)
             setup(p, (config,))
             start(p)

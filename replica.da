@@ -87,7 +87,6 @@ class Replica(process):
 
         # self.start = time.time()
         # self.max_time = -1
-        self.one_round_time_timeout = 4 * 0.07
 
     #################################################################
     ############## Fault Injection part #############
@@ -115,9 +114,8 @@ class Replica(process):
         Pseudocode in Paper:
         return round timer formula
     '''
-    def Pacemaker_get_round_timer(round):
-        random.seed(round)
-        return random.randint(0, 8)
+    def Pacemaker_get_round_timer():
+        return 4 * 0.07
 
     '''
         Pseudocode in Paper:
@@ -129,8 +127,7 @@ class Replica(process):
         self.Pacemaker_stop_timer(self.pacemaker_current_round)
         self.proposalMsgFlag = True
         self.pacemaker_current_round = new_round
-        self.Pacemaker_local_time = Pacemaker_get_round_timer(
-            self.pacemaker_current_round)
+        self.Pacemaker_local_time = Pacemaker_get_round_timer()
 
     '''
         Pseudocode in Paper:
@@ -575,7 +572,7 @@ class Replica(process):
     def receive(msg=('done', "Done")):
         self.doneFlag = True
 
-    ############## End  Receive Handlers Definations#######################
+    ############## End  Receive Handlers Definations #####################
     ######################################################################
 
     def run():
@@ -588,7 +585,7 @@ class Replica(process):
                 break
             elif await(self.proposalMsgFlag):
                 self.proposalMsgFlag = False
-            elif timeout(self.one_round_time_timeout):
+            elif timeout(self.Pacemaker_get_round_timer()):
                 Pacemaker_local_timeout_round()
         output(self, " process exiting ")
 
@@ -623,7 +620,7 @@ class ReplicaFI(process, Replica):
     def process_new_round_event(last_tc):
         if self == self.Leader_get_leader(self.pacemaker_current_round):
             if config['test_case'] == 'leader_crashed':
-                output(self, "I am leader and I crashed !!!!!!!!!!!!!!!!!!!!!")
+                output(self, "!!!!!!!!!!!!!!!!!!!!! I am leader and crashed !!!!!!!!!!!!!!!!!!!!!")
                 self.exitFlag = True
                 exit()
         super().process_new_round_event(last_tc)
@@ -633,6 +630,7 @@ class ReplicaFI(process, Replica):
         output(self, " process started ")
         process_new_round_event(self.last_tc)
         while True:
+            
             if await(self.exitFlag):
                 exit()
             elif await(self.doneFlag and self.mempool.allCommitted()):
@@ -640,7 +638,7 @@ class ReplicaFI(process, Replica):
             elif await(self.proposalMsgFlag):
                 self.proposalMsgFlag = False
 
-            elif timeout(self.pacemaker_local_time):
+            elif timeout(self.Pacemaker_get_round_timer()):
                 output("Timing out")
                 Pacemaker_local_timeout_round()
 
