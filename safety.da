@@ -1,6 +1,6 @@
 # type: ignore
 
-import vote_info as vi
+from vote_info import VoteInfo
 from ledger_commit_info import LedgerCommitInfo
 from util import valid_signatures, createDigest, createConcatString
 from vote_msg import VoteMsg
@@ -13,7 +13,7 @@ from nacl.signing import VerifyKey
 
 class Safety():
 
-    def __init__(self, author, ledger, blockTree, private_key, public_keys, highest_vote_round=0, highest_qc_round=-1):
+    def __init__(self, author, ledger, blockTree, private_key, public_keys, highest_vote_round=None, highest_qc_round=None):
 
         self.author = author
         self.ledger = ledger
@@ -41,24 +41,35 @@ class Safety():
         return True
 
     def __increase_highest_vote_round(self, round):
-        self.highest_vote_round = max(self.highest_vote_round, round)
+        if self.highest_vote_round is not None and round is not None:
+            self.highest_vote_round = max(self.highest_vote_round, round)
+        elif round is not None:
+            self.highest_vote_round = round
 
     def __update_highest_qc_round(self, qc_round):
-        self.highest_qc_round = max(self.highest_qc_round, qc_round)
+        if self.highest_qc_round is not None and qc_round is not None:
+            self.highest_qc_round = max(self.highest_qc_round, qc_round)
+        elif qc_round is not None:
+            self.highest_qc_round = qc_round
 
     def __consecutive(self, block_round, round):
         '''
         Checks if round is followed by block_round
         '''
+        if round is None:
+            return True
 
         return round+1 == block_round
+    # TODO: VERIFY IN END
 
     def __safe_to_extend(self, block_round, qc_round, tc):
+        if tc is None:
+            return True
         return self.__consecutive(block_round, tc.round) and qc_round >= max(tc.tmo_high_qc_rounds)
 
     def __safe_to_vote(self, block_round, qc_round, tc):
 
-        if block_round <= max(self.highest_vote_round, qc_round):
+        if qc_round is not None and self.highest_vote_round is not None and block_round <= max(self.highest_vote_round, qc_round):
             # 1. Must vote in monotonically increasing rounds AND
             # 2. Must extend a smaller round.
             return False
@@ -75,14 +86,16 @@ class Safety():
 
     def __commit_state_id_candidate(self, block_round, qc):
         # Find the committed id in case a qc is formed in a vote round
-        if self.__consecutive(block_round, qc.vote_info.round):
+        if qc is not None and self.__consecutive(block_round, qc.vote_info.round):
             return (self.ledger.pending_state(qc.vote_info.id))
-            pass
         else:
             return None
 
     def make_vote(self, b, last_tc):
-        qc_round = b.qc.vote_info.round
+        if b.qc is None:
+            qc_round = None
+        else:
+            qc_round = b.qc.vote_info.round
 
         # Checking if b.qc and last_tc if present are valid
         valid_signatures_check = False
@@ -92,18 +105,24 @@ class Safety():
             valid_signatures_check = False
 
         if valid_signatures_check and self.__safe_to_vote(b.round, qc_round, last_tc):
-        # if valid_signatures(b, last_tc) and self.__safe_to_vote(b.round, qc_round, last_tc):
+            # if valid_signatures(b, last_tc) and self.__safe_to_vote(b.round, qc_round, last_tc):
             self.__update_highest_qc_round(qc_round)    # Protect qc round
             # Don't vote again in this or lower round
             self.__increase_highest_vote_round(b.round)
 
             # VoteInfo carries the potential QC info with ids and rounds of the parent QC
-            # TODO: Ledger object creation
-            vote_info = vi.VoteInfo(
-                b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id))
-            # TODO:
-            digest_of_vote_info = createDigest(
-                createConcatString(b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id)))[0]
+            if b.qc is None:
+                vote_info = VoteInfo(
+                    b.id, b.round, None, qc_round, self.ledger.pending_state(b.id))
+            else:
+                vote_info = VoteInfo(
+                    b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id))
+            if b.qc is None:
+                digest_of_vote_info = createDigest(
+                    createConcatString(b.id, b.round, None, qc_round, self.ledger.pending_state(b.id)))[0]
+            else:
+                digest_of_vote_info = createDigest(
+                    createConcatString(b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id)))[0]
 
             ledger_commit_info = LedgerCommitInfo(
                 digest_of_vote_info, self.__commit_state_id_candidate(b.round, b.qc))
@@ -112,7 +131,10 @@ class Safety():
         return None
 
     def make_timeout(self, author, privateKey, round, high_qc, last_tc):
-        qc_round = high_qc.vote_info.round
+        if high_qc is None:
+            qc_round = None
+        else:
+            qc_round = high_qc.vote_info.round
 
         # Checking if high_qc and last_tc if present are valid
         valid_signatures_check = False
@@ -123,7 +145,7 @@ class Safety():
 
         # if True:
         if valid_signatures_check and self.__safe_to_timeout(round, qc_round, last_tc):
-        # if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
+            # if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
             self.__increase_highest_vote_round(round)  # stop voting for round
             # TODO: Develop Timeout Info
             return TimeOutInfo(author, privateKey, round, high_qc)

@@ -5,8 +5,13 @@ from util import createConcatString, createDigest
 
 class Block:
     def generate_block_id(self):
-        s = createConcatString(
-            self.author, self.round, self.payload, self.qc.vote_info.id, self.qc.signatures)
+        if self.qc is not None:
+
+            s = createConcatString(
+                self.author, self.round, self.payload, self.qc.vote_info.id, self.qc.signatures)
+        else:
+            s = createConcatString(
+                self.author, self.round, self.payload, None, None)
         (digest, msg) = createDigest(s)
         return digest
 

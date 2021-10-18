@@ -22,7 +22,6 @@ def main(process):
     # log = open('test_case_1/file5.log', "a")
     #  = log
     # output("here")
-    print("here2")
 
 # class A:
 #     def __init__(self, x, y):

@@ -47,9 +47,9 @@ class DiemBFT(process):
             setup(c, (privateKeyMap[c], clientPublicKeyMap,
                   replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 5, 2, 25,))
 
-        start(replicas)
+        start(replicas | replicasFI)
         start(clients)
-        start(replicasFI)
+        # start(replicasFI)
         await(each(c in clients, has=received(('done',), from_=c)))
         # await(len(setof(r, received(('done',), from_=c))) == self.numberOfClients)
         send(('done', "Done",), to=(replicasFI | replicas))
@@ -71,13 +71,13 @@ def main():
     #             "numberOfFaulty": 2, "test_case": "leader_delay"}]
 
     configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "leader_crashed"}]
+                "numberOfFaulty": 0, "test_case": "leader_crashed"}]
 
     for config in configs:
-        output("*************************",
-               config['test_case'], "*****************")
-        output("Number of Clients : ", config['numberOfClients'], " Number of Replicas:",
-               config['numberOfReplicas'], " Faulty Replicas ", config['numberOfFaulty'])
+        # output("*************************",
+        #    config['test_case'], "*****************")
+        # output("Number of Clients : ", config['numberOfClients'], " Number of Replicas:",
+        #    config['numberOfReplicas'], " Faulty Replicas ", config['numberOfFaulty'])
         p = new(DiemBFT)
         setup(p, (config,))
         start(p)

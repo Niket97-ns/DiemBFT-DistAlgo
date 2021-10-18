@@ -47,22 +47,28 @@ class Ledger:
         self.committed_ledger_tree = LedgerTree()
         self.commit_cache = {}
 
-    def speculate(self, prev_block_id, block_id, txns):
+    def speculate(self, block_qc, block_id, txns):
         # For all blocks except first
-        if prev_block_id in self.pending_ledger_tree.block_id_to_state:
-            prev_state_id = self.pending_ledger_tree.block_id_to_state[prev_block_id].state_id
+
+        if block_qc is not None and block_qc.vote_info.id in self.pending_ledger_tree.block_id_to_state:
+            prev_state_id = self.pending_ledger_tree.block_id_to_state[
+                block_qc.vote_info.id].state_id
 
             # create hash of state id considering prev block
             new_state_id = createDigest(
                 createConcatString(prev_state_id, txns))[0]
+
+            new_state = LedgerState(
+                new_state_id, block_id, block_qc.vote_info.id, txns)
 
         # for 1st blocks state creation
         else:
             # create hash of state id not considering prev block
             new_state_id = createDigest(createConcatString(txns))[0]
 
-        new_state = LedgerState(
-            new_state_id, block_id, prev_block_id, txns)
+            new_state = LedgerState(
+                new_state_id, block_id, None, txns)
+
         self.pending_ledger_tree.add(block_id, new_state)
 
     def pending_state(self, block_id):
@@ -78,7 +84,6 @@ class Ledger:
             return self.pending_ledger_tree.get(block_id)
 
     def commit(self, block_id):
-
         to_be_committed_state = self.get_pending_state(block_id)
         if not to_be_committed_state:
             return False, None
@@ -88,7 +93,7 @@ class Ledger:
             # print(self.committed_ledger_tree.block_id_to_state)
             self.commit_cache[to_be_committed_state.txns] = True
             if to_be_committed_state.txns[0] != "":
-                ledgerFile = open(self.test_case +"/"+self.fileName, "a")
+                ledgerFile = open(self.test_case + "/"+self.fileName, "a")
                 ledgerFile.write("\n" + to_be_committed_state.txns[0])
                 ledgerFile.close()
             self.mempool.make_transaction_committed(to_be_committed_state.txns)

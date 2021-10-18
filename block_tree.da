@@ -65,11 +65,12 @@ class BlockTree:
         vote_info = VoteInfo()
         ledger_commit_info = LedgerCommitInfo(vote_info=vote_info)
 
-        self.high_qc = QC(vote_info=vote_info,
-                          ledger_commit_info=ledger_commit_info)
-        self.high_commit_qc = QC(
-            vote_info=vote_info, ledger_commit_info=ledger_commit_info)
-
+        # self.high_qc = QC(vote_info=vote_info,
+        #   ledger_commit_info=ledger_commit_info)
+        # self.high_commit_qc = QC(
+        #     vote_info=vote_info, ledger_commit_info=ledger_commit_info)
+        self.high_qc = None
+        self.high_commit_qc = None
         self.f = f
 
         # TODO: need to create a tree structure somehow
@@ -85,22 +86,33 @@ class BlockTree:
     def process_qc(self, qc):
         wasCommitted = False
         client = None
-        if qc.ledger_commit_info.commit_state_id != 0 and qc.ledger_commit_info.commit_state_id != None:
-            wasCommitted, client = self.ledger.commit(qc.vote_info.parent_id)
+
+        # TODO: RECHECK ONCE for values of ledger commit info and commit state id
+        if qc != None and qc.ledger_commit_info != None and qc.ledger_commit_info.commit_state_id != None:
+            if qc.vote_info.parent_id is not None:
+                wasCommitted, client = self.ledger.commit(
+                    qc.vote_info.parent_id)
+
             # parent becomes new root we remove the committed message from the ppending tree
             # TODO: Prune
             # self.pending_block_tree.prune(qc.vote_info.parent_id)
-
             # still a bit doubtful
-            if qc.vote_info.round > self.high_commit_qc.vote_info.round:
+            # print(self.high_commit_qc.vote_info.round)
+            if self.high_commit_qc is None:
                 self.high_commit_qc = qc
 
-        if qc.vote_info.round > self.high_qc.vote_info.round:
+            elif qc.vote_info is not None and qc.vote_info.round is not None and self.high_commit_qc.vote_info.round is not None and qc.vote_info.round > self.high_commit_qc.vote_info.round:
+                self.high_commit_qc = qc
+            else:
+                self.high_commit_qc = qc
+        if qc is not None and self.high_qc is not None and self.high_qc.vote_info is not None and self.high_qc.vote_info.round is not None and qc.vote_info is not None and qc.vote_info.round is not None and qc.vote_info.round > self.high_qc.vote_info.round:
+            self.high_qc = qc
+        elif qc is not None:
             self.high_qc = qc
         return wasCommitted, client
 
     def execute_and_insert(self, block):
-        self.ledger.speculate(block.qc.vote_info.id, block.id, block.payload)
+        self.ledger.speculate(block.qc, block.id, block.payload)
         self.pending_block_tree.add(block)
 
     def process_vote(self, v):
@@ -112,7 +124,8 @@ class BlockTree:
             self.pending_signers[vote_idx] = set()
 
         self.pending_signers[vote_idx].add(v.author)
-        self.pending_votes[vote_idx].add((v.author, v.signature))  # tuple of sender and sign
+        self.pending_votes[vote_idx].add(
+            (v.author, v.signature))  # tuple of sender and sign
 
         if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:  # Quorum formed
             # Alert NOT sure about exe_state_id
@@ -124,8 +137,8 @@ class BlockTree:
                     author=self.author,
                     signers=self.pending_signers[vote_idx]
                     )
-            return qc, wasCommitted,client
-        return None, wasCommitted,client
+            return qc, wasCommitted, client
+        return None, wasCommitted, client
 
     def generate_block(self, author, curr_round, txns):
         return Block(author, curr_round, txns, self.high_qc)

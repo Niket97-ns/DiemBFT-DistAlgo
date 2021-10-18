@@ -27,7 +27,7 @@ class Client(process):
         self.committed_requests = set()  # Check for requests already committed
 
     def run():
-        output(self, " process started ")
+        # output(self, " process started ")
         while self.request_number <= self.number_of_requests:
             time.sleep(self.delay)
             self.delay = set_initial_delay()
@@ -47,7 +47,7 @@ class Client(process):
                 output("TIMED OUT FOR REQUEST ", request, "!! RETRANSMITTING")
         send(('done',), to=parent())
 
-        output(self, " process exiting ")
+        # output(self, " process exiting ")
 
         exit()
 
