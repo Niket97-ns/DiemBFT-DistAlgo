@@ -7,6 +7,7 @@ import block_tree as bt
 from timeoutInfo import TimeOutInfo
 import pickle
 from nacl.signing import VerifyKey
+from nacl.exceptions import BadSignatureError
 # import safet
 from util import createDigest, createConcatString
 
@@ -28,6 +29,7 @@ class Safety():
     def valid_signatures(self, quorum, round=None, highqc_voteinfo_round=None):
         if quorum is None:
             return True
+        # print(quorum)
         for sender_sign_pair in quorum:
             if sender_sign_pair is not None:
                 try:

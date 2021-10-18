@@ -1,0 +1,65 @@
+{
+    "happy_path":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "happy_path",
+        "seed": 42
+    },
+    "leader_crashed":{
+        "numberOfClients": 2,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "leader_crashed",
+        "seed": 42
+    },
+    "vote_message_dropped":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "vote_message_dropped",
+        "seed": 42
+    },
+    "crashed_while_voting":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "crashed_while_voting",
+        "seed": 42
+    },
+    "leader_delayed":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 2,
+        "test_case": "leader_delayed",
+        "seed": 42
+    },
+    "vote_message_delay":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "vote_message_delay",
+        "seed": 42
+    },
+    "happy_path_many_client":{
+        "numberOfClients": 2,
+        "numberOfReplicas": 7,
+        "numberOfFaulty": 2,
+        "test_case": "happy_path",
+        "seed": 42
+    },
+    "vote_message_dropped_randomly":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "vote_message_dropped_randomly",
+        "seed": 42
+    },
+    "vote_message_delayed_randomly":{
+        "numberOfClients": 1,
+        "numberOfReplicas": 4,
+        "numberOfFaulty": 1,
+        "test_case": "vote_message_delayed_randomly",
+        "seed": 42
+    }
+}
