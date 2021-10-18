@@ -2,7 +2,7 @@
 
 class TC():
 
-    def __init__(self, round=0, tmo_high_qc_rounds=None, tmo_signatures=None):
+    def __init__(self, round=None, tmo_high_qc_rounds=None, tmo_signatures=None):
         # All timeout messages that form TC have the same round
         self.round = round
         # A vector of 2f+1 high qc round numbers

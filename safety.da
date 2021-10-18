@@ -77,12 +77,17 @@ class Safety():
         return self.__consecutive(block_round, qc_round) or self.__safe_to_extend(block_round, qc_round, tc)
 
     def __safe_to_timeout(self, round, qc_round, tc):
-        if qc_round < self.highest_qc_round or round <= max(self.highest_vote_round-1, qc_round):
+        if qc_round is None or self.highest_qc_round is None or self.highest_vote_round is None:
+            return True
+        elif qc_round < self.highest_qc_round or round <= max(self.highest_vote_round-1, qc_round):
             # Respect highest_qc_round and don't timeout in a past round
             return False
 
         # qc or tc must allow entering the round to timeout
-        return self.__consecutive(round, qc_round) or self.__consecutive(round, tc.round)
+        if tc is None:
+            return True
+        else:
+            return self.__consecutive(round, qc_round) or self.__consecutive(round, tc.round)
 
     def __commit_state_id_candidate(self, block_round, qc):
         # Find the committed id in case a qc is formed in a vote round

@@ -2,7 +2,7 @@
 class VoteInfo:
     # better default values for initialization.
     # TODO: Take care of default values
-    def __init__(self, id=0, round=0, parent_id=-1, parent_round=-1, exec_state_id=0) -> None:
+    def __init__(self, id=0, round=None, parent_id=-1, parent_round=None, exec_state_id=None) -> None:
         self.id = id
         self.round = round
         self.parent_id = parent_id

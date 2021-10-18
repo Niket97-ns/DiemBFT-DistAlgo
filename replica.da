@@ -19,6 +19,7 @@ from tc import TC
 import time
 import util
 import os
+import traceback
 
 
 class ProposalMsg:
@@ -34,6 +35,8 @@ class Replica(process):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
         self.sync_up = {}
         self.testingFlag = True
+        self.exitFlagCrashing = False
+
         self.config = config
         self.doneFlag = False
         self.privateKey = privateKey
@@ -83,7 +86,7 @@ class Replica(process):
 
         # self.start = time.time()
         # self.max_time = -1
-        self.one_round_time_timeout = 4 * 1
+        self.one_round_time_timeout = 4 * 0.07
 
     #################################################################
     ############## Fault Injection part #############
@@ -151,17 +154,22 @@ class Replica(process):
                     present = True
             if not present:
                 self.pacemaker_pending_timeouts[tmo_info.round].add(tmo_info)
+        # print(len(self.pacemaker_pending_timeouts[tmo_info.round]))
         if len(self.pacemaker_pending_timeouts[tmo_info.round]) == self.f + 1:
             Pacemaker_local_timeout_round()
+
         if len(self.pacemaker_pending_timeouts[tmo_info.round]) == 2*self.f + 1:
             tmo_high_qc_rounds_list = []
             tmo_signatures_list = []
             for t in self.pacemaker_pending_timeouts[tmo_info.round]:
-                tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
+                if t is None or t.high_qc is None or t.high_qc.vote_info is None or t.high_qc.vote_info.round is None:
+                    tmo_high_qc_rounds_list.append(None)
+                else:
+                    tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
+
                 # tuple of sender and sign
                 tmo_signatures_list.append((t.sender, t.signature))
-
-            return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_signatures_list)
+            return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_high_qc_rounds_list)
 
     def Pacemaker_advance_round_tc(tc):
         if tc == None or tc.round < self.pacemaker_current_round:
@@ -169,6 +177,8 @@ class Replica(process):
         self.pacemaker_last_round_tc = tc
         # self.last_tc = tc
         # self.last_round_tc = tc
+        # output(" TC generated for round ",
+        #        tc.round+1)
         self.Pacemaker_start_timer(tc.round + 1)
         return True
 
@@ -305,12 +315,15 @@ class Replica(process):
         if self == self.Leader_get_leader(self.pacemaker_current_round):
             output("LEADER ELECTED FOR ROUND ",
                    self.pacemaker_current_round, " = ", self)
-            # if self == self.validators[2]:
-            #     output("I crashed")
+            if self == self.validators[2]:
+                output("I crashed")
 
-            #     time.sleep(4)
-
-            #     exit()
+                # time.sleep(4)
+                # self.exitFlagCrashing = True
+                # self.proposalMsgFlag = True
+                # exit()
+                time.sleep(2)
+            # send()
 
             next_transaction = self.mempool.get_requested_transaction()
             # output("PROPOSED TRANSACTION FOR ROUND ",
@@ -348,6 +361,7 @@ class Replica(process):
             V = pickle.loads(V.message)
             V = V[0]
             qc, wasCommittedFlag, client = self.blockTree.process_vote(V)
+
             if wasCommittedFlag and client is not None and client != "":
                 pass
                 # output("******* SENDING ACKNOWLEDGEMENT TO ", c)
@@ -364,6 +378,7 @@ class Replica(process):
                 # self.start = time.time()
                 self.process_new_round_event(None)
         except:
+            # traceback.print_exc()
             output("!!!!!!!!! UNABLE TO VERIFY VOTE FROM ", c, " FOR ROUND ",
                    self.pacemaker_current_round, " !!!!!!!!!")
             pass
@@ -457,10 +472,12 @@ class Replica(process):
             T = T[0]
             self.process_certificate_qc(T.tmo_info.high_qc)
             self.process_certificate_qc(T.high_commit_qc)
+            # print("----->", T.last_round_tc)
             self.Pacemaker_advance_round_tc(T.last_round_tc)
             tc = self.Pacemaker_process_remote_timeout(T)
             if tc != None:
                 output(" TC generated for round ", tc.round)
+
                 self.Pacemaker_advance_round_tc(tc)
                 self.process_new_round_event(tc)
         except:
@@ -487,15 +504,25 @@ class Replica(process):
         output(self, " process started ")
         process_new_round_event(self.last_tc)
         while True:
-            if await(self.doneFlag and self.mempool.allCommitted()):
+            if await(self.exitFlagCrashing):
+                break
+            elif await(self.doneFlag and self.mempool.allCommitted()):
                 break
             elif await(self.proposalMsgFlag):
                 self.proposalMsgFlag = False
-            # elif timeout(self.one_round_time_timeout):
-            #     # elif timeout(10):
-            #     output("Time out")
-            #     Pacemaker_local_timeout_round()
+            elif timeout(self.one_round_time_timeout):
+                Pacemaker_local_timeout_round()
         output(self, " process exiting ")
+        # while not self.doneFlag:
+        #     self.proposalMsgFlag = False
+        #     if await(self.proposalMsgFlag):
+        #         pass
+        #     elif await(self.exitFlagCrashing):
+        #         print("Reached exit condition")
+        #         break
+        #     elif timeout(self.one_round_time_timeout):
+        #         Pacemaker_local_timeout_round()
+
         exit()
 
 

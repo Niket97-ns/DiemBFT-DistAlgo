@@ -9,4 +9,8 @@ class TimeOutInfo():
         self.round = round
         self.high_qc = high_qc
         self.sender = sender
-        self.signature = util.sign(privateKey, round, high_qc.vote_info.round)
+        if high_qc is None or high_qc.vote_info is None or high_qc.vote_info.round is None:
+            self.signature = util.sign(privateKey, round, None)
+        else:
+            self.signature = util.sign(
+                privateKey, round, high_qc.vote_info.round)
