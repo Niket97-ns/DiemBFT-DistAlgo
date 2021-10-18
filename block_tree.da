@@ -30,17 +30,11 @@ class PendingBlockTree:
         self.id_to_block[block.id] = block
         # assign self.current_leaf to this block
         self.current_leaf = block
-        # can the parennt block for the new block be different than self.current_leaf?
-        # if yes then what to do?
 
     def add(self, block):
         self.id_to_block[block.id] = block
         # simple case without forking
-        # should we verify that the qc.vote_info.id == self.current_leaf.id?
         self.current_leaf = block
-        # since block already has qc, which already has block_id of parent
-        # is there any other specific pointer to the parent even needed?
-        # the map should take care of it imo
 
     def prune(self, parent_id):
         # this parent_id will be the new root
@@ -68,14 +62,12 @@ class BlockTree:
         self.high_qc = None   # highest known QC
         self.high_commit_qc = None   # highest QC that serves as a commit certificate
         self.f = f
-
-        self.pending_block_tree = PendingBlockTree()   # tree of blocks pending commitment
+        # tree of blocks pending commitment
+        self.pending_block_tree = PendingBlockTree()
         self.pending_votes = {}   # collected votes per block indexed by their LedgerInfo hash
         self.ledger = ledger
         self.author = author
-
         self.pending_signers = {}
-
 
     '''
         Pseudocode in Paper:
@@ -85,15 +77,17 @@ class BlockTree:
             high_commit_qc <- max_round(qc, high_commit_qc)
         high_qc <- max_round(qc, high_qc)
     '''
+
     def process_qc(self, qc):
         wasCommitted = False
         client = None
 
+        # Check for None conditions and commit to ledger if qc contains a vote_info.parent_id which is not None
         if qc != None and qc.ledger_commit_info != None and qc.ledger_commit_info.commit_state_id != None:
             if qc.vote_info.parent_id is not None:
                 wasCommitted, client = self.ledger.commit(
                     qc.vote_info.parent_id)
-
+            # Update hgh_commit_qc
             if self.high_commit_qc is None:
                 self.high_commit_qc = qc
 
@@ -101,22 +95,22 @@ class BlockTree:
                 self.high_commit_qc = qc
             else:
                 self.high_commit_qc = qc
+        # Update high_qc
         if qc is not None and self.high_qc is not None and self.high_qc.vote_info is not None and self.high_qc.vote_info.round is not None and qc.vote_info is not None and qc.vote_info.round is not None and qc.vote_info.round > self.high_qc.vote_info.round:
             self.high_qc = qc
         elif qc is not None:
             self.high_qc = qc
         return wasCommitted, client
 
-
     '''
         Pseudocode in Paper:
         Ledger.speculate(b.qc.block_id, b.id, b.payload)
         pending_block_tree.add(b)
     '''
+
     def execute_and_insert(self, block):
         self.ledger.speculate(block.qc, block.id, block.payload)
         self.pending_block_tree.add(block)
-
 
     '''
         Pseudocode in Paper:
@@ -131,10 +125,12 @@ class BlockTree:
             return qc
         return None
     '''
+
     def process_vote(self, v):
         wasCommitted, client = self.process_qc(v.high_commit_qc)
         vote_idx = createDigest(createConcatString(v.ledger_commit_info))[0]
 
+        # use digest of ledger_commit_info from votes to form a quorum
         if vote_idx not in self.pending_votes:
             self.pending_votes[vote_idx] = set()
             self.pending_signers[vote_idx] = set()
@@ -144,7 +140,7 @@ class BlockTree:
             (v.author, v.signature))  # tuple of sender and sign
 
         if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:  # Quorum formed
-
+            # Generate and return QC if quorum formed
             qc = QC(vote_info=v.vote_info,
                     signatures=self.pending_votes[vote_idx],
                     ledger_commit_info=v.ledger_commit_info,
@@ -153,7 +149,6 @@ class BlockTree:
                     )
             return qc, wasCommitted, client
         return None, wasCommitted, client
-
 
     '''
         Pseudocode in Paper:
@@ -165,5 +160,6 @@ class BlockTree:
                 id <- hash(author || round || payload || qc.vote_info.id || qc.signatures)
             )
     '''
+
     def generate_block(self, author, curr_round, txns):
         return Block(author, curr_round, txns, self.high_qc)

@@ -21,33 +21,27 @@ class Client(process):
         random.seed(seed)
         # Initial delay after which client sends request
         self.delay = set_initial_delay()
-        self.responseMap = {}
         self.request_number = 1    # Initial request number
-        # self.sequence_number = 1    # Sequence number to uniquely identify request
-        self.committed_requests = set()  # Check for requests already committed
 
     def run():
-        # output(self, " process started ")
         while self.request_number <= self.number_of_requests:
             time.sleep(self.delay)
             self.delay = set_initial_delay()
             request = str(self)+"-"+str(request_number)
             encoded_request = str.encode(request)
             digest, msg_to_send = util.createDigest(encoded_request)
-            # TODO: use another variable to store validators
             send(('Request', request, msg_to_send, digest),
                  to=self.replicaPublicKeyMap.keys())
-
+            # wait for f+1 responses for replicas
             if await(len(setof(r, received(('Reply', _), from_=r))) > self.f + 1):
                 self.request_number += 1
                 output(self, " received acknowledgment for ", request)
                 reset(received)
             elif timeout(6):
                 output("TIMED OUT FOR REQUEST ", request, "!! RETRANSMITTING")
+        # Send done to parent process when all requests have been served.
         send(('done',), to=parent())
-
-        # output(self, " process exiting ")
-
+        # Exit
         exit()
 
     def set_initial_delay():
@@ -55,28 +49,3 @@ class Client(process):
 
     def generate_request():
         return request
-
-    def receive(msg=("ResponseHandler", (response, response_digest, request_number,)), from_=c):
-
-        if request_number in self.responseMap:
-            if response_digest in self.responseMap[request_number]:
-                self.responseMap[request_number][response_digest] += 1
-            else:
-                self.responseMap[request_number][response_digest] = 1
-        else:
-            self.responseMap[request_number] = {}
-            self.responseMap[request_number][response_digest] = 1
-
-        # If the request number of the response has not already been committed
-        if request_number not in self.committed_requests:
-
-            if self.responseMap[request_number][response_digest] >= (self.f + 1):
-                self.committed_requests.add(request_number)
-                self.request_number += 1
-                if self.request_number <= self.number_of_requests:
-                    # TODO: Send next request to all replicas
-                    time.sleep(self.delay)
-                    self.delay = set_initial_delay()
-                    request = str(self)+"-"+str(request_number)
-                    send(('Request', request,),
-                         to=self.replicaPublicKeyMap.keys())

@@ -25,7 +25,8 @@ import traceback
 class ProposalMsg:
     def __init__(self, block, last_tc, high_commit_qc, safety):
         self.block = block
-        self.last_tc = last_tc   # TC for block.round - 1 if block.qc.vote_info.round != block.round - 1, else None
+        # TC for block.round - 1 if block.qc.vote_info.round != block.round - 1, else None
+        self.last_tc = last_tc
         self.high_commit_qc = high_commit_qc   # QC to synchronize on committed blocks
         self.signature = safety.sign(self.block.id)
 
@@ -110,7 +111,6 @@ class Replica(process):
     def Pacemaker_stop_timer(round):
         pass
 
-
     '''
         Pseudocode in Paper:
         return round timer formula
@@ -118,9 +118,6 @@ class Replica(process):
     def Pacemaker_get_round_timer(round):
         random.seed(round)
         return random.randint(0, 8)
-        # TODO: need to understand this formula for round_timer
-        # return round_time(round)
-
 
     '''
         Pseudocode in Paper:
@@ -131,11 +128,9 @@ class Replica(process):
     def Pacemaker_start_timer(new_round):
         self.Pacemaker_stop_timer(self.pacemaker_current_round)
         self.proposalMsgFlag = True
-
         self.pacemaker_current_round = new_round
         self.Pacemaker_local_time = Pacemaker_get_round_timer(
             self.pacemaker_current_round)
-
 
     '''
         Pseudocode in Paper:
@@ -152,7 +147,6 @@ class Replica(process):
         signed_timeout_msg = self.safety.sign(timeout_msg)
 
         send(("process_timeout_message", signed_timeout_msg), to=self.validators)
-
 
     '''
         Pseudocode in Paper:
@@ -177,26 +171,23 @@ class Replica(process):
 
         if tmo_info.round < self.pacemaker_current_round:
             return None
-        # if tmo_info.sender()
         if tmo_info.round not in self.pacemaker_pending_timeouts:
 
             self.pacemaker_pending_timeouts[tmo_info.round] = set()
             self.pacemaker_pending_timeouts[tmo_info.round].add(tmo_info)
 
         else:
-            # Check if senders tmo_info is already present
-            # If not, insert
             present = False
             for i in self.pacemaker_pending_timeouts[tmo_info.round]:
                 if i.sender == tmo_info.sender:
                     present = True
             if not present:
                 self.pacemaker_pending_timeouts[tmo_info.round].add(tmo_info)
-        # print(len(self.pacemaker_pending_timeouts[tmo_info.round]))
         if len(self.pacemaker_pending_timeouts[tmo_info.round]) == self.f + 1:
             Pacemaker_local_timeout_round()
 
         if len(self.pacemaker_pending_timeouts[tmo_info.round]) == 2*self.f + 1:
+            # Create a list of signatures and high qc rounds
             tmo_high_qc_rounds_list = []
             tmo_signatures_list = []
             for t in self.pacemaker_pending_timeouts[tmo_info.round]:
@@ -205,10 +196,8 @@ class Replica(process):
                 else:
                     tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
 
-                # tuple of sender and sign
                 tmo_signatures_list.append((t.sender, t.signature))
             return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_high_qc_rounds_list)
-
 
     '''
         Pseudocode in Paper:
@@ -225,7 +214,6 @@ class Replica(process):
         self.Pacemaker_start_timer(tc.round + 1)
         return True
 
-
     '''
         Pseudocode in Paper:
         if qc.vote_info.round < current_round then
@@ -235,7 +223,6 @@ class Replica(process):
         return true
     '''
     def Pacemaker_advance_round_qc(qc):
-        # TODO: Check again important
         if qc is None:
             return False
         elif qc.vote_info.round is None:
@@ -245,10 +232,8 @@ class Replica(process):
         self.pacemaker_last_round_tc = None
         self.Pacemaker_start_timer(qc.vote_info.round + 1)
 
-
     #################################################################
     ############## End Pacemaker Function Definitions #############
-
 
     #################################################################
     ############## Start LeaderElection Function Definitions #############
@@ -271,7 +256,8 @@ class Replica(process):
         return active_validators.pick_one(seed <- qc.voteinfo.round)
     '''
     def Leader_elect_reputation_leader(qc):
-        active_validators = set()   # validators that signed the last window size committed blocks
+        # validators that signed the last window size committed blocks
+        active_validators = set()
         last_authors = set()   # ordered set of authors of last exclude size committed blocks
         current_qc = qc
         i = 0
@@ -282,8 +268,6 @@ class Replica(process):
 
                 break
             else:
-
-                # TODO: Different than paper
                 current_block_id = current_qc.vote_info.parent_id
                 current_block = self.blockTree.pending_block_tree.get_block(
                     current_block_id)
@@ -291,7 +275,6 @@ class Replica(process):
                     break
                 block_author = current_block.author
                 if i < self.window_size:
-                    # TODO: add signers
                     active_validators = active_validators.union(
                         current_qc.signers)
                 if len(last_authors) < self.exclude_size:
@@ -314,10 +297,8 @@ class Replica(process):
     # def Leader_pick_one(active_validators, seed):
 
     def Leader_get_round_robin_leader(curr_round):
-        # Round robin leader (2 rounds per leader)
         idx = (curr_round) % len(self.validators)
         return self.validators[idx]
-
 
     '''
         Pseudocode in Paper:
@@ -330,7 +311,6 @@ class Replica(process):
             return self.reputation_leaders[round]
         return self.Leader_get_round_robin_leader(round)
 
-
     '''
         Pseudocode in Paper:
         extended_round <- qc.vote_info.parent_round
@@ -340,6 +320,7 @@ class Replica(process):
             reputation_leaders[current_round + 1] <- elect_reputation_leader(qc)
     '''
     def Leader_update_leaders(qc):
+        # check for none values
         if qc is not None:
             if qc.vote_info is not None:
                 if qc.vote_info.parent_round is not None:
@@ -356,21 +337,12 @@ class Replica(process):
             extended_round = None
             qc_round = None
         pacemaker_current_round = self.pacemaker_current_round
-        # TODO: ADDRESS THE SECOND CONDITION: IMPORTANT
         if extended_round is not None and qc_round is not None and extended_round + 1 == qc_round and qc_round + 1 == pacemaker_current_round:
-            # TODO: Check paper
-
-            # self.leader = Leader_get_round_robin_leader(
-            #     pacemaker_current_round + 1)
-            # pass
             self.reputation_leaders[pacemaker_current_round +
                                     1] = Leader_elect_reputation_leader(qc)
 
-            # self.reputation_leaders[pacemaker_current_round +
-            #                         1] = election_reputation_leader(qc)
     #################################################################
     ############## End LeaderElection Function Definitions #############
-
 
     '''
         Pseudocode in Paper:
@@ -381,11 +353,9 @@ class Replica(process):
     def process_certificate_qc(qc):
         wasCommitted, client = self.blockTree.process_qc(qc)
         if wasCommitted and client is not None and client != "":
-            # output("******* SENDING ACKNOWLEDGEMENT TO ", c)
-
             send(('Reply', self), to=client)
-        self.Leader_update_leaders(qc)
 
+        self.Leader_update_leaders(qc)
         self.Pacemaker_advance_round_qc(qc)
 
     '''
@@ -396,24 +366,11 @@ class Replica(process):
             broadcast ProposalMsg(b, last_tc, Block-Tree.high_commit_qc)
     '''
     def process_new_round_event(last_tc):
-        # Not sure what they are trying to check
-        # TODO: Check code, change to get_leader and self.pacemaker.curr_round
         if self == self.Leader_get_leader(self.pacemaker_current_round):
             output("LEADER ELECTED FOR ROUND ",
                    self.pacemaker_current_round, " = ", self)
-            if self == self.validators[2]:
-                output("I crashed")
-
-            # time.sleep(4)
-                # self.exitFlagCrashing = True
-            # self.proposalMsgFlag = True
-                # exit()
-                time.sleep(2)
-            # send()
 
             next_transaction = self.mempool.get_requested_transaction()
-            # output("PROPOSED TRANSACTION FOR ROUND ",
-            #    self.pacemaker_current_round, " = ", next_transaction)
             if next_transaction is None:
                 b = self.blockTree.generate_block(self,
                                                   self.pacemaker_current_round, ("", ""))
@@ -435,9 +392,9 @@ class Replica(process):
                      to=self.validators)
                 output("BROADCASTING PROPOSAL FOR ROUND ",
                        self.pacemaker_current_round, " --- ", next_transaction)
-    # I am confused if this is the same vote handler
-    # because the sequence of these proceders in the papaer is different
 
+    #############################################################
+    ############## Start Receive Handlers Definations #######################
 
     '''
         Pseudocode in Paper:
@@ -446,11 +403,11 @@ class Replica(process):
             process_certificate_qc(qc)
             process_new_round_event(None)
     '''
+    # Receive handler for vote messages
     def receive(msg=("process_vote_msg", V), from_=c):
-        # output(" Received vote message from  ", c, " FOR ROUND ",
-        #    self.pacemaker_current_round, " ----------")
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
         try:
+            # verify sender signature and message
             verifyKeySender.verify(V.message, V.signature)
             V = pickle.loads(V.message)
             V = V[0]
@@ -462,20 +419,15 @@ class Replica(process):
                 # send(('Reply', self), to=client)
 
             if qc != None:
-
+                # QC generated.
                 output("******* QC GENERATED FOR ROUND ",
                        qc.vote_info.round, " *******")
 
                 self.process_certificate_qc(qc)
-
-                # self.max_time = max(self.max_time, time.time() - self.start)
-                # self.start = time.time()
                 self.process_new_round_event(None)
         except:
-            # traceback.print_exc()
             output("!!!!!!!!! UNABLE TO VERIFY VOTE FROM ", c, " FOR ROUND ",
                    self.pacemaker_current_round, " !!!!!!!!!")
-            pass
 
     '''
         Pseudocode in Paper:
@@ -491,13 +443,12 @@ class Replica(process):
         if vote_msg != None then
             send vote_msg to LeaderElection.get_leader(current_round + 1)
     '''
+    # Receive handler for proposal messages
     def receive(msg=("process_proposal_message", P), from_=r):
-        # output("---------- RECEIVED PROPOSAL MESSAGE FROM ", r, " FOR ROUND ",
-        #        self.pacemaker_current_round, " ----------")
+
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
-
         try:
-
+            # Verify sender signature and message
             verifyKeySender.verify(P.message, P.signature)
             P = pickle.loads(P.message)
             P = P[0]
@@ -508,70 +459,58 @@ class Replica(process):
             self.Pacemaker_advance_round_tc(P.last_tc)
 
             round = self.pacemaker_current_round
-            # it should be round but name converntions was a bit weird
             temp_leader = self.Leader_get_leader(round)
-            # need to confirm the data type of leader variable
-            # output(P.block.payload)
 
             if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
                 # if P.block.round > round:
-                #     pass
+                # Can add replica sync up code here
+                # PSEUDOCODE FOR BRINGING VALIDATORS UPTO DATE (NOT IMPLEMENTED):
+
+                # When a validator receives a block with id greater than it's current round, it broadcasts a "need_sync_up"
+                # message to all replicas. After verifying the replica's identity, the other replicas send the "requiring sync_up" replica the following in signed message format:
+
+                # 1. blockTree.high_qc
+                # 2. blockTree.high_commit_qc
+                # 3. last_tc
+                # 4. ledger_file_contents
+                # 5. ledger_tree
+                # 6. pending_blocks
+                # 7. mempool
+
+                # The replica will wait for a quorum of such signatures, and once it receives this, it will change its
+                # state to the received state of the quorum
+
+                # PSEUDOCODE:
+
+                # if P.block.id > self.pacemaker_current_round:
+                #   broadcast("need_sync_up", to=all_replicas)
+
+                # if received("need_sync_up", from=r):
+                #   verify(r)
+                #   send the above mentioned data, signed, to r
+                #   send(("sync_up_data", signature) ,to=r)
+
+                # if received(("sync_up_data", signature), from = r):
+                #   verify(r)
+                #   Maintain hashmap[signature] = set of senders
+                #   if len(set) == quorum:
+                #       set objects to data retrived from signature
                 return None
 
             self.blockTree.execute_and_insert(P.block)
             vote_msg = self.safety.make_vote(P.block, P.last_tc)
             if vote_msg != None:
-                # need to find receive handler for this send
+
                 new_leader_name = self.Leader_get_leader(round + 1)
-                # need to decide the message
                 if P.block.payload != ("", ""):
                     self.mempool.make_transaction_pending(P.block.payload)
 
                 signed_vote_msg = self.safety.sign(vote_msg)
-                # output("sending vote to ", r, " FOR ROUND ",
-                #    self.pacemaker_current_round)
-                # self.proposalMsgFlag = True
 
                 send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
         except:
             output("!!!!!!!!! UNABLE TO VERIFY PROPOSAL FROM ", r, " FOR ROUND ",
                    self.pacemaker_current_round, " !!!!!!!!!")
-            pass
-
-    def receive(msg=("Sync_me", "I am behind"), from_=r):
-        all_data = (self.blockTree.high_commit_qc,
-                    self.blockTree.high_qc,
-
-                    # self.blockTree.pending_block_tree,
-                    self.pacemaker_last_round_tc,
-                    )
-
-        digest = util.createDigest(pickle.dumps(all_data))
-        send(("present_data", pickle.dumps(all_data), digest), to=r)
-
-    def receive(msg=("present_data", sent_data, digest), from_=r):
-        verifyKeySender = VerifyKey(self.replicaPublicKeyMap[r])
-
-        if util.createDigest(sent_data) == digest:
-
-            if digest not in self.sync_up:
-
-                self.sync_up[digest] = set()
-                self.sync_up[digest].add(r)
-            else:
-                self.sync_up[digest].add(r)
-
-            if len(self.sync_up[digest]) >= self.f + 1:
-                # P = pickle.loads(digest)
-                sent_data = pickle.loads(sent_data)
-                self.blockTree.high_commit_qc = sent_data[0]
-                self.blockTree.high_qc = sent_data[1]
-                self.pacemaker_last_round_tc = sent_data[2]
-                # fileContents = sent_data[3]
-
-                # P = P[0]
-                # output("I got data from all")
-
 
     '''
         Pseudocode in Paper:
@@ -583,18 +522,20 @@ class Replica(process):
             Pacemaker.advance_round(tc)
             process_new_round_event(tc)
     '''
+    # Receive handler for timeout messages
     def receive(msg=("process_timeout_message", T), from_=c):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
         try:
+            # verify sender and message
             verifyKeySender.verify(T.message, T.signature)
             T = pickle.loads(T.message)
             T = T[0]
             self.process_certificate_qc(T.tmo_info.high_qc)
             self.process_certificate_qc(T.high_commit_qc)
-            # print("----->", T.last_round_tc)
             self.Pacemaker_advance_round_tc(T.last_round_tc)
             tc = self.Pacemaker_process_remote_timeout(T)
             if tc != None:
+                # TC generated
                 output(" TC generated for round ", tc.round)
 
                 self.Pacemaker_advance_round_tc(tc)
@@ -608,6 +549,7 @@ class Replica(process):
                request, " FROM ", c, "***********")
         request_tuple = (request, c)
         if util.checkDigest(message_to_hash, digest):
+            # if request already committed, respond from commit_cache.
             if request_tuple in self.ledger.commit_cache:
                 output("******* SENDING ACKNOWLEDGEMENT TO ", c,
                        " FOR REQUEST ", request, "***********")
@@ -618,6 +560,9 @@ class Replica(process):
 
     def receive(msg=('done', "Done")):
         self.doneFlag = True
+
+    ############## End  Receive Handlers Definations#######################
+    ######################################################################
 
     def run():
         output(self, " process started ")
@@ -632,15 +577,6 @@ class Replica(process):
             elif timeout(self.one_round_time_timeout):
                 Pacemaker_local_timeout_round()
         output(self, " process exiting ")
-        # while not self.doneFlag:
-        #     self.proposalMsgFlag = False
-        #     if await(self.proposalMsgFlag):
-        #         pass
-        #     elif await(self.exitFlagCrashing):
-        #         print("Reached exit condition")
-        #         break
-        #     elif timeout(self.one_round_time_timeout):
-        #         Pacemaker_local_timeout_round()
 
         exit()
 

@@ -17,14 +17,14 @@ class Safety():
         self.author = author
         self.ledger = ledger
         self.blockTree = blockTree
-        self.private_key = private_key   # Own private key, ie. private key of replica using the safety object
+        # Own private key, ie. private key of replica using the safety object
+        self.private_key = private_key
         self.public_keys = public_keys   # Public keys of all validators
         self.highest_vote_round = highest_vote_round   # initially 0
         self.highest_qc_round = highest_qc_round
 
+    # Validate quorum of signatures
     def valid_signatures(self, quorum, round=None, highqc_voteinfo_round=None):
-        # print("quorum:")
-        # print(quorum)
         if quorum is None:
             return True
         for sender_sign_pair in quorum:
@@ -39,34 +39,35 @@ class Safety():
         return True
 
     #### Safety : Private
-    
+
     '''
         Pseudocode in Paper:
         # commit not to vote in rounds lower than round
         highest_vote_round <- max(qc_round, highest_vote_round)
     '''
+
     def __increase_highest_vote_round(self, round):
         if self.highest_vote_round is not None and round is not None:
             self.highest_vote_round = max(self.highest_vote_round, round)
         elif round is not None:
             self.highest_vote_round = round
 
-
     '''
         Pseudocode in Paper:
         highest_qc_round <- max(qc_round, highest_qc_round)
     '''
+
     def __update_highest_qc_round(self, qc_round):
         if self.highest_qc_round is not None and qc_round is not None:
             self.highest_qc_round = max(self.highest_qc_round, qc_round)
         elif qc_round is not None:
             self.highest_qc_round = qc_round
 
-
     '''
         Pseudocode in Paper:
         return round + 1 = block_round
     '''
+
     def __consecutive(self, block_round, round):
         '''
         Checks if round is followed by block_round
@@ -75,16 +76,15 @@ class Safety():
             return True
         return round+1 == block_round
 
-
     '''
         Pseudocode in Paper:
         return consecutive(block_round, tc.round) and qc_round >= max{tc.tmo_high_qc_rounds}
     '''
+
     def __safe_to_extend(self, block_round, qc_round, tc):
         if tc is None:
             return True
         return self.__consecutive(block_round, tc.round) and qc_round >= max(tc.tmo_high_qc_rounds)
-
 
     '''
         Pseudocode in Paper:
@@ -95,6 +95,7 @@ class Safety():
             // Extending qc from previous round or safe to extend due to tc
         return consecutive(block_round, qc_round) or safe_to_extend(block_round, qc_round, tc)
     '''
+
     def __safe_to_vote(self, block_round, qc_round, tc):
 
         if qc_round is not None and self.highest_vote_round is not None and block_round <= max(self.highest_vote_round, qc_round):
@@ -104,7 +105,6 @@ class Safety():
         # Extending qc round from previous round or safe to extend due to tc
         return self.__consecutive(block_round, qc_round) or self.__safe_to_extend(block_round, qc_round, tc)
 
-
     '''
         Pseudocode in Paper:
         if qc_round < highest_qc_round or round <= max{highest_vote_round - 1, qc_round} then
@@ -113,6 +113,7 @@ class Safety():
         // qc or tc must allow entering the round to timeout
         return consecutive(round, qc_round) or consecutive(round, tc_round)
     '''
+
     def __safe_to_timeout(self, round, qc_round, tc):
         if qc_round is None or self.highest_qc_round is None or self.highest_vote_round is None:
             return True
@@ -126,7 +127,6 @@ class Safety():
         else:
             return self.__consecutive(round, qc_round) or self.__consecutive(round, tc.round)
 
-
     '''
         Pseudocode in Paper:
         // find the committed id in case a qc is formed in the vote round
@@ -135,13 +135,13 @@ class Safety():
         else
             return None
     '''
+
     def __commit_state_id_candidate(self, block_round, qc):
         # Find the committed id in case a qc is formed in a vote round
         if qc is not None and self.__consecutive(block_round, qc.vote_info.round):
             return (self.ledger.pending_state(qc.vote_info.id))
         else:
             return None
-
 
     #### Safety : Public
 
@@ -165,6 +165,7 @@ class Safety():
             return VoteMsg(vote_info, ledger_commit_info, Block-Tree.high_commit_qc)
         return None
     '''
+
     def make_vote(self, b, last_tc):
         if b.qc is None:
             qc_round = None
@@ -203,7 +204,6 @@ class Safety():
 
         return None
 
-
     '''
         Pseudocode in Paper:
         qc_round <- high_qc.vote_info.round;
@@ -212,6 +212,7 @@ class Safety():
             return TimeoutInfo(round, high_qc)
         return None
     '''
+
     def make_timeout(self, author, privateKey, round, high_qc, last_tc):
         if high_qc is None:
             qc_round = None
