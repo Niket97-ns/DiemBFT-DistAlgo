@@ -52,7 +52,7 @@ class Client(process):
         exit()
 
     def set_initial_delay():
-        return random.randint(0, 1)//100
+        return random.randint(0, 1)//1000
 
     def generate_request():
         return request

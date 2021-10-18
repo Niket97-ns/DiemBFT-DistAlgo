@@ -5,6 +5,9 @@ import client
 import nacl.utils
 from nacl.signing import SigningKey
 import time
+import json
+from pprint import pprint
+import sys
 
 
 class DiemBFT(process):
@@ -45,7 +48,7 @@ class DiemBFT(process):
 
         for c in clients:
             setup(c, (privateKeyMap[c], clientPublicKeyMap,
-                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 5, 2, 25,))
+                  replicaPublicKeyMap, (self.numberOfReplicas-1)//3, 10, 2, 25,))
 
         start(replicas | replicasFI)
         start(clients)
@@ -53,33 +56,38 @@ class DiemBFT(process):
         await(each(c in clients, has=received(('done',), from_=c)))
         # await(len(setof(r, received(('done',), from_=c))) == self.numberOfClients)
         send(('done', "Done",), to=(replicasFI | replicas))
+
         exit()
 
 
 def main():
-    # config(channel="Reliable")
+    with open("test_case_config.json", 'r') as reader:
+        configStr = reader.read()
+        configs = json.loads(configStr)
+        if len(sys.argv) == 2:
+            config = configs[sys.argv[1]]
+            output("*************************",config['test_case'],"*****************")
+            output("Number of Clients : ",config['numberOfClients']," Number of Replicas:",config['numberOfReplicas'], " Faulty Replicas ",config['numberOfFaulty'] )
+            p = new(DiemBFT)
+            setup(p, (config,))
+            start(p)
+        else:
+            config = configs['happy_path']
+            output("*************************",config['test_case'],"*****************")
+            p = new(DiemBFT)
+            setup(p, (config,))
+            start(p)
 
     # configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "leader_crashed"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "vote_message_dropped"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "crashed_while_voting"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "happy_path"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 2, "test_case": "leader_delay"}]
+    #             "numberOfFaulty": 1, "test_case": "leader_crashed"}]
 
-    configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 0, "test_case": "leader_crashed"}]
-
-    for config in configs:
-        # output("*************************",
-        #    config['test_case'], "*****************")
-        # output("Number of Clients : ", config['numberOfClients'], " Number of Replicas:",
-        #    config['numberOfReplicas'], " Faulty Replicas ", config['numberOfFaulty'])
-        p = new(DiemBFT)
-        setup(p, (config,))
-        start(p)
+    # for config in configs:
+    #     # output("*************************",
+    #     #    config['test_case'], "*****************")
+    #     # output("Number of Clients : ", config['numberOfClients'], " Number of Replicas:",
+    #     #    config['numberOfReplicas'], " Faulty Replicas ", config['numberOfFaulty'])
+    #     p = new(DiemBFT)
+    #     setup(p, (config,))
+    #     start(p)
 
     exit()

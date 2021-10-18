@@ -160,7 +160,7 @@ class Replica(process):
 
         if len(self.pacemaker_pending_timeouts[tmo_info.round]) == 2*self.f + 1:
             tmo_high_qc_rounds_list = []
-            tmo_signatures_list = []
+            tmo_signatures_list = set()
             for t in self.pacemaker_pending_timeouts[tmo_info.round]:
                 if t is None or t.high_qc is None or t.high_qc.vote_info is None or t.high_qc.vote_info.round is None:
                     tmo_high_qc_rounds_list.append(None)
@@ -168,8 +168,9 @@ class Replica(process):
                     tmo_high_qc_rounds_list.append(t.high_qc.vote_info.round)
 
                 # tuple of sender and sign
-                tmo_signatures_list.append((t.sender, t.signature))
-            return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_high_qc_rounds_list)
+                # tmo_signatures_list.append((t.sender, t.signature))
+                tmo_signatures_list.add((t.sender, t.signature))
+            return TC(tmo_info.round, tmo_high_qc_rounds_list, tmo_signatures_list)
 
     def Pacemaker_advance_round_tc(tc):
         if tc == None or tc.round < self.pacemaker_current_round:
@@ -315,15 +316,14 @@ class Replica(process):
         if self == self.Leader_get_leader(self.pacemaker_current_round):
             output("LEADER ELECTED FOR ROUND ",
                    self.pacemaker_current_round, " = ", self)
-            if self == self.validators[2]:
-                output("I crashed")
+            # if self == self.validators[2] or self == self.validators[1]:
+            #     output("I crashed")
 
-                # time.sleep(4)
-                # self.exitFlagCrashing = True
-                # self.proposalMsgFlag = True
-                # exit()
-                time.sleep(2)
-            # send()
+            #     # time.sleep(4)
+            #     self.exitFlagCrashing = True
+            #     # self.proposalMsgFlag = True
+            #     exit()
+            #     # time.sleep(2)
 
             next_transaction = self.mempool.get_requested_transaction()
             # output("PROPOSED TRANSACTION FOR ROUND ",
@@ -423,6 +423,13 @@ class Replica(process):
                 # output("sending vote to ", r, " FOR ROUND ",
                 #    self.pacemaker_current_round)
                 # self.proposalMsgFlag = True
+                if config['test_case'] == 'vote_message_dropped_randomly':
+                    if 0.05 < random.random():
+                        send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
+                    return
+                if config['test_case'] == 'vote_message_delayed_randomly':
+                    if 0.05 > random.random():
+                        time.sleep(3)
 
                 send(("process_vote_msg", signed_vote_msg), to=new_leader_name)
         except:
@@ -513,6 +520,7 @@ class Replica(process):
             elif timeout(self.one_round_time_timeout):
                 Pacemaker_local_timeout_round()
         output(self, " process exiting ")
+
         # while not self.doneFlag:
         #     self.proposalMsgFlag = False
         #     if await(self.proposalMsgFlag):
@@ -531,39 +539,42 @@ class ReplicaFI(process, Replica):
     def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config):
         super().setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f, t, config)
         self.exitFlag = False
+        random.seed(config['seed'])
 
     def send(M, to):
         # do original send
         # imagine that attr and val were obtained from a misbehavior spec.
         if config['test_case'] != 'happy_path':
             if M[0] == "process_proposal_message":
-                if config['test_case'] == 'leader_crashed':
+                if config['test_case'] == 'leader_delayed':
+                    time.sleep(2)
 
-                    self.exitFlag = True
-
-                elif config['test_case'] == 'leader_delayed':
-                    time.sleep(3)
                 # attr = "current_round"
                 # val = 3
                 # setattr(attr, val)
+
             if M[0] == "process_vote_msg":
                 if config['test_case'] == 'crashed_while_voting':
                     self.exitFlag = True
-                elif config['test_case'] == 'vote_message_dropped':
-                    pass
+                    print("is this getting executed?????????????????????????????????")
+                    return 
+                if config['test_case'] == 'vote_message_dropped':
+                    return
         super().send(M, to)
-
-    def receive(msg=('done', "Done")):
-        self.doneFlag = True
+    
+    def process_new_round_event(last_tc):
+        if self == self.Leader_get_leader(self.pacemaker_current_round):
+            if config['test_case'] == 'leader_crashed':
+                output(self, "I am leader and I crashed !!!!!!!!!!!!!!!!!!!!!")
+                self.exitFlag = True
+                exit()
+        super().process_new_round_event(last_tc)
 
     def run():
         output(self, " process started ")
         process_new_round_event(self.last_tc)
         while True:
-
             if await(self.exitFlag):
-                output(self, " process exiting ")
-
                 exit()
             elif await(self.doneFlag and self.mempool.allCommitted()):
                 break
@@ -573,3 +584,4 @@ class ReplicaFI(process, Replica):
             elif timeout(self.pacemaker_local_time):
                 print("Timing out")
                 Pacemaker_local_timeout_round()
+        exit()
