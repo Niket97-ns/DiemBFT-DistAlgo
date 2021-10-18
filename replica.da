@@ -550,7 +550,7 @@ class Replica(process):
             tc = self.Pacemaker_process_remote_timeout(T)
             if tc != None:
                 # TC generated
-                output(" TC generated for round ", tc.round)
+                output(" TC GENERATED FOR ROUND ", tc.round)
 
                 self.Pacemaker_advance_round_tc(tc)
                 self.process_new_round_event(tc)
@@ -605,24 +605,21 @@ class ReplicaFI(process, Replica):
     def send(M, to):
         # do original send
         # imagine that attr and val were obtained from a misbehavior spec.
+
+        # Check the type of test_case and trigger the requred condition
         if config['test_case'] != 'happy_path':
             if M[0] == "process_proposal_message":
                 if config['test_case'] == 'leader_delayed':
                     time.sleep(2)
-
-                # attr = "current_round"
-                # val = 3
-                # setattr(attr, val)
-
             if M[0] == "process_vote_msg":
                 if config['test_case'] == 'crashed_while_voting':
                     self.exitFlag = True
-                    print("is this getting executed?????????????????????????????????")
                     return 
                 if config['test_case'] == 'vote_message_dropped':
                     return
         super().send(M, to)
     
+    # If this faulty replica is leader crash it else keep the usual working.
     def process_new_round_event(last_tc):
         if self == self.Leader_get_leader(self.pacemaker_current_round):
             if config['test_case'] == 'leader_crashed':
@@ -630,6 +627,7 @@ class ReplicaFI(process, Replica):
                 self.exitFlag = True
                 exit()
         super().process_new_round_event(last_tc)
+
 
     def run():
         output(self, " process started ")
@@ -643,6 +641,8 @@ class ReplicaFI(process, Replica):
                 self.proposalMsgFlag = False
 
             elif timeout(self.pacemaker_local_time):
-                print("Timing out")
+                output("Timing out")
                 Pacemaker_local_timeout_round()
+
+        output(self, " process exiting ")
         exit()

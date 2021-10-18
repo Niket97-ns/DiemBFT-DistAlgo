@@ -9,7 +9,7 @@ import util
 
 
 class Client(process):
-    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f=0, number_of_requests=4, seed=2, t=25):
+    def setup(privateKey, clientPublicKeyMap, replicaPublicKeyMap, f=0, number_of_requests=4, seed=42, t=25):
         self.f = f      # Maximum Byzantine Fault Tolerance
         self.privateKey = privateKey
         self.clientPublicKeyMap = clientPublicKeyMap
