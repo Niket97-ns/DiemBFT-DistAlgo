@@ -65,32 +65,35 @@ class BlockTree:
         vote_info = VoteInfo()
         ledger_commit_info = LedgerCommitInfo(vote_info=vote_info)
 
-        self.high_qc = None
-        self.high_commit_qc = None
+        self.high_qc = None   # highest known QC
+        self.high_commit_qc = None   # highest QC that serves as a commit certificate
         self.f = f
 
-        self.pending_block_tree = PendingBlockTree()
-        self.pending_votes = {}
+        self.pending_block_tree = PendingBlockTree()   # tree of blocks pending commitment
+        self.pending_votes = {}   # collected votes per block indexed by their LedgerInfo hash
         self.ledger = ledger
         self.author = author
 
         self.pending_signers = {}
 
+
+    '''
+        Pseudocode in Paper:
+        if qc:ledger commit info:commit state id != None then
+            Ledger.commit(qc.vote_info.parent_id)
+            pending_block_tree.prune(qc.vote_info.parent_id) // parent id becomes the new root of pending
+            high_commit_qc <- max_round(qc, high_commit_qc)
+        high_qc <- max_round(qc, high_qc)
+    '''
     def process_qc(self, qc):
         wasCommitted = False
         client = None
 
-        # TODO: RECHECK ONCE for values of ledger commit info and commit state id
         if qc != None and qc.ledger_commit_info != None and qc.ledger_commit_info.commit_state_id != None:
             if qc.vote_info.parent_id is not None:
                 wasCommitted, client = self.ledger.commit(
                     qc.vote_info.parent_id)
 
-            # parent becomes new root we remove the committed message from the ppending tree
-            # TODO: Prune
-            # self.pending_block_tree.prune(qc.vote_info.parent_id)
-            # still a bit doubtful
-            # print(self.high_commit_qc.vote_info.round)
             if self.high_commit_qc is None:
                 self.high_commit_qc = qc
 
@@ -104,10 +107,30 @@ class BlockTree:
             self.high_qc = qc
         return wasCommitted, client
 
+
+    '''
+        Pseudocode in Paper:
+        Ledger.speculate(b.qc.block_id, b.id, b.payload)
+        pending_block_tree.add(b)
+    '''
     def execute_and_insert(self, block):
         self.ledger.speculate(block.qc, block.id, block.payload)
         self.pending_block_tree.add(block)
 
+
+    '''
+        Pseudocode in Paper:
+        process_qc(v.high_commit_qc)
+        vote_idx <- hash(v.ledger_commit_info)
+        pending_votes[vote_idx] <- pending_votes[vote_idx] union v.signature
+        if |pending votes[vote idx]| = 2f + 1 then
+            qc <- QC (
+                vote_info <- v.vote_info,
+                state_id <- v.state id,
+                votes <- pending_votes[vote_idx] )
+            return qc
+        return None
+    '''
     def process_vote(self, v):
         wasCommitted, client = self.process_qc(v.high_commit_qc)
         vote_idx = createDigest(createConcatString(v.ledger_commit_info))[0]
@@ -121,9 +144,7 @@ class BlockTree:
             (v.author, v.signature))  # tuple of sender and sign
 
         if len(self.pending_votes[vote_idx]) == 2 * self.f + 1:  # Quorum formed
-            # Alert NOT sure about exe_state_id
 
-            # TODO: Adding signature of author in qc
             qc = QC(vote_info=v.vote_info,
                     signatures=self.pending_votes[vote_idx],
                     ledger_commit_info=v.ledger_commit_info,
@@ -133,5 +154,16 @@ class BlockTree:
             return qc, wasCommitted, client
         return None, wasCommitted, client
 
+
+    '''
+        Pseudocode in Paper:
+        return Block (
+                author <- u,
+                round <- current_round,
+                payload <- txns,
+                qc <- high_qc,
+                id <- hash(author || round || payload || qc.vote_info.id || qc.signatures)
+            )
+    '''
     def generate_block(self, author, curr_round, txns):
         return Block(author, curr_round, txns, self.high_qc)
