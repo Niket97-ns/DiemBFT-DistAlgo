@@ -179,7 +179,6 @@ class Safety():
             valid_signatures_check = False
 
         if valid_signatures_check and self.__safe_to_vote(b.round, qc_round, last_tc):
-            # if valid_signatures(b, last_tc) and self.__safe_to_vote(b.round, qc_round, last_tc):
             self.__update_highest_qc_round(qc_round)    # Protect qc round
             # Don't vote again in this or lower round
             self.__increase_highest_vote_round(b.round)
@@ -226,11 +225,8 @@ class Safety():
         if last_tc is not None and not self.valid_signatures(last_tc.tmo_signatures):
             valid_signatures_check = False
 
-        # if True:
         if valid_signatures_check and self.__safe_to_timeout(round, qc_round, last_tc):
-            # if valid_signatures(high_qc, last_tc) and self.__safe_to_timeout(round, qc_round, last_tc):
             self.__increase_highest_vote_round(round)  # stop voting for round
-            # TODO: Develop Timeout Info
             return TimeOutInfo(author, privateKey, round, high_qc)
         return None
 

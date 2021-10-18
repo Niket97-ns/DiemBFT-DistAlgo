@@ -122,7 +122,7 @@ class BlockTree:
         Pseudocode in Paper:
         process_qc(v.high_commit_qc)
         vote_idx <- hash(v.ledger_commit_info)
-        pending_votes[vote_idx] <- pending_votes[vote_idx] union v.signature
+        pending_votes[vote_idx] <- pending_votes[vote_idx] union {v.signature}
         if |pending votes[vote idx]| = 2f + 1 then
             qc <- QC (
                 vote_info <- v.vote_info,
