@@ -46,6 +46,3 @@ class Client(process):
 
     def set_initial_delay():
         return random.randint(0, 1)//100
-
-    def generate_request():
-        return request

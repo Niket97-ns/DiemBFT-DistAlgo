@@ -452,7 +452,6 @@ class Replica(process):
             verifyKeySender.verify(P.message, P.signature)
             P = pickle.loads(P.message)
             P = P[0]
-
             self.process_certificate_qc(P.block.qc)
             self.process_certificate_qc(P.high_commit_qc)
 
@@ -460,6 +459,7 @@ class Replica(process):
 
             round = self.pacemaker_current_round
             temp_leader = self.Leader_get_leader(round)
+            # print("----->")
 
             if P.block.round != round or r != temp_leader or P.block.author != temp_leader or (P.block.payload != ('', '') and P.block.payload not in self.mempool.q):
                 # if P.block.round > round:
@@ -498,7 +498,9 @@ class Replica(process):
                 return None
 
             self.blockTree.execute_and_insert(P.block)
+
             vote_msg = self.safety.make_vote(P.block, P.last_tc)
+
             if vote_msg != None:
 
                 new_leader_name = self.Leader_get_leader(round + 1)

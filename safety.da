@@ -8,6 +8,7 @@ from timeoutInfo import TimeOutInfo
 import pickle
 from nacl.signing import VerifyKey
 # import safet
+from util import createDigest, createConcatString
 
 
 class Safety():
@@ -191,7 +192,9 @@ class Safety():
             else:
                 vote_info = VoteInfo(
                     b.id, b.round, b.qc.vote_info.id, qc_round, self.ledger.pending_state(b.id))
+
             if b.qc is None:
+
                 digest_of_vote_info = createDigest(
                     createConcatString(b.id, b.round, None, qc_round, self.ledger.pending_state(b.id)))[0]
             else:
@@ -200,6 +203,7 @@ class Safety():
 
             ledger_commit_info = LedgerCommitInfo(
                 digest_of_vote_info, self.__commit_state_id_candidate(b.round, b.qc))
+
             return VoteMsg(self.author, vote_info, ledger_commit_info, self.blockTree.high_commit_qc, self.private_key)
 
         return None
