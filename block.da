@@ -5,8 +5,8 @@ from util import createConcatString, createDigest
 
 class Block:
     def generate_block_id(self):
+        # Create a digest as the block_id for a generated blcok
         if self.qc is not None:
-
             s = createConcatString(
                 self.author, self.round, self.payload, self.qc.vote_info.id, self.qc.signatures)
         else:
@@ -16,13 +16,13 @@ class Block:
         return digest
 
     def __init__(self, author, current_round, txns, highest_qc=None) -> None:
+        # The author of the block, may not be the same as qc:author after view-change
         self.author = author
-        self.round = current_round
-        self.qc = highest_qc
-        self.payload = txns
-
+        self.round = current_round   # The round that generated this proposal
+        self.qc = highest_qc   # QC for parent block
+        self.payload = txns    # Proposed transaction(s)
+        # A unique digest of author, round, payload, qc:vote info:id and qc:signatures
         self.id = self.generate_block_id()
-        # self.id = hash(author, round, payload, qc.vote_info.id, qc.signature)
 
     def get_parent_id(self):
         return self.qc.vote_info.id

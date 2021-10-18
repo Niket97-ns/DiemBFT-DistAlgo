@@ -41,11 +41,14 @@ class Ledger:
         self.mempool = mempool
         self.author = author
         self.fileName = str(self.author)+".txt"
-        # self.file = open(self.fileName, "w")
-        # self.ledger_file = open(self.fileName, "w+")
         self.pending_ledger_tree = LedgerTree()
         self.committed_ledger_tree = LedgerTree()
         self.commit_cache = {}
+
+    '''
+        Pseudocode in Paper:
+        speculate(prev block id; block id; txns) // apply txns speculatively
+    '''
 
     def speculate(self, block_qc, block_id, txns):
         # For all blocks except first
@@ -71,6 +74,11 @@ class Ledger:
 
         self.pending_ledger_tree.add(block_id, new_state)
 
+    '''
+        Pseudocode in Paper:
+        pending state(block id) // find the pending state for the given block id or ? if not present
+    '''
+
     def pending_state(self, block_id):
         if self.pending_ledger_tree.get(block_id) == None:
             return None
@@ -83,14 +91,19 @@ class Ledger:
         else:
             return self.pending_ledger_tree.get(block_id)
 
+    '''
+        Pseudocode in Paper:
+        commit(block id) // commit the pending prefix of the given block id and prune other branches
+    '''
+
     def commit(self, block_id):
         to_be_committed_state = self.get_pending_state(block_id)
         if not to_be_committed_state:
             return False, None
         try:
+            # code to commit the transaction, add it to ledger_tree, ledgerFile and cache.
             to_be_committed_state.is_committed = True
             self.committed_ledger_tree.add(block_id, to_be_committed_state)
-            # print(self.committed_ledger_tree.block_id_to_state)
             self.commit_cache[to_be_committed_state.txns] = True
             if to_be_committed_state.txns[0] != "":
                 ledgerFile = open(self.test_case + "/"+self.fileName, "a")
@@ -100,10 +113,14 @@ class Ledger:
 
             self.pending_ledger_tree.remove(block_id)
 
-            # TODO: Prune logic remaining
             return True, to_be_committed_state.txns[1]
         except:
             print("Could not commit ledger state for block id: ", block_id)
+
+    '''
+        Pseudocode in Paper:
+        committed block(block id) // returns a committed block given its id
+    '''
 
     def committed_block(self, block_id):
         return self.committed_ledger_tree.get(block_id, None)

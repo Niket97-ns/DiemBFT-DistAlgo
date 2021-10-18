@@ -16,21 +16,24 @@ class Mempool:
                 return False
         return True
 
+    # Check if all transactions of mempool have been committed
     def allCommitted(self):
-        # print(self.q)
         for key in self.q.keys():
             if self.q[key] != "COMMITTED":
                 return False
         return True
 
+    # change status of transaction to COMMITTED
     def make_transaction_committed(self, txn):
         self.q[txn] = "COMMITTED"
         return
 
+    # change status of transaction to PENDING
     def make_transaction_pending(self, txn):
         self.q[txn] = "PENDING"
         return
 
+    # fetch transaction from mempool which has status REQUESTED
     def get_requested_transaction(self):
         if self.isEmpty():
             return None
@@ -39,8 +42,3 @@ class Mempool:
                 self.q[key] = "PENDING"
                 return key
         return None
-
-    # def isFull(self):
-    #     return self.q.full()
-
-    # def printQueue(self):

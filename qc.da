@@ -3,18 +3,18 @@ from vote_info import VoteInfo
 from ledger_commit_info import LedgerCommitInfo
 import util
 
-
+'''
+    QC is a VoteMsg with multiple signatures
+'''
 class QC:
-    # just create a standard qc with round zero
     def __init__(self, vote_info=None, signatures=None, ledger_commit_info=None, author=None, signers=None) -> None:
         self.vote_info = vote_info
         self.ledger_commit_info = ledger_commit_info
-        self.signatures = signatures                        # Object not yet created
-        self.author = author
+        self.signatures = signatures  # A quorum of signatures
+        self.author = author   # The validator that produced the qc
         self.signers = signers
         if self.author == None:
             self.author_signature = None
         else:
-            # TODO:
             self.author_signature = 1
-        # author and author signature remaining
+        
