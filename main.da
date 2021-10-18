@@ -58,19 +58,19 @@ class DiemBFT(process):
 
 def main():
 
-    # configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "leader_crashed"}, 
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "vote_message_dropped"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "crashed_while_voting"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 1, "test_case": "happy_path"},
-    #             {"numberOfClients": 1, "numberOfReplicas": 4,
-    #             "numberOfFaulty": 2, "test_case": "leader_delay"}]
+    configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
+                "numberOfFaulty": 1, "test_case": "leader_crashed"}, 
+                {"numberOfClients": 1, "numberOfReplicas": 4,
+                "numberOfFaulty": 1, "test_case": "vote_message_dropped"},
+                {"numberOfClients": 1, "numberOfReplicas": 4,
+                "numberOfFaulty": 1, "test_case": "crashed_while_voting"},
+                {"numberOfClients": 1, "numberOfReplicas": 4,
+                "numberOfFaulty": 1, "test_case": "happy_path"},
+                {"numberOfClients": 1, "numberOfReplicas": 4,
+                "numberOfFaulty": 2, "test_case": "leader_delayed"}]
 
     configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
-                "numberOfFaulty": 1, "test_case": "leader_crashed"}]
+                "numberOfFaulty": 1, "test_case": "happy_path"}]
 
     for config in configs:
         output("*************************",config['test_case'],"*****************")

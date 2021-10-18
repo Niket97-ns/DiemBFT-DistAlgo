@@ -68,7 +68,7 @@ class Replica(process):
         # --------------- End Initializing block tree ---------- #
 
         # -------------- start pacemaker attribute initialization ------------ #
-        self.pacemaker_current_round = 1
+        self.pacemaker_current_round = 0
         self.pacemaker_pending_timeouts = {}
         self.pacemaker_last_round_tc = TC(
             0, [0]*(2*(self.f)+1), [None]*(2*(self.f)+1))
@@ -317,6 +317,7 @@ class Replica(process):
                 send(('Reply', self), to=client)
 
             if qc != None:
+                output("QC Generated", self.pacemaker_current_round)
                 self.process_certificate_qc(qc)
                 # self.max_time = max(self.max_time, time.time() - self.start)
                 # print("@@@@@@@@@@@@@@@@@ ",self.max_time," @@@@@@@@@@@@@@@@")
@@ -380,7 +381,7 @@ class Replica(process):
             self.Pacemaker_advance_round_tc(T.last_round_tc)
             tc = self.Pacemaker_process_remote_timeout(T)
             if tc != None:
-                output("TC generated for round ", self.pacemaker_current_round)
+                output("$$$$$$$$$$$$$$$$$$ TC generated for round ", self.pacemaker_current_round)
                 self.Pacemaker_advance_round_tc(tc)
                 self.process_new_round_event(tc)
         except:
@@ -425,20 +426,20 @@ class ReplicaFI(process, Replica):
         # do original send
         # imagine that attr and val were obtained from a misbehavior spec.
         if config['test_case'] != 'happy_path':
+            
             if M[0] == "process_proposal_message":
+                output("Going here???????????????????????", config['test_case'])
                 if config['test_case'] == 'leader_crashed':
                     output("leader crashing")
-                    
-                    self.exitFlag =  True
-                    
+                    self.exitFlag =  True    
                 elif config['test_case'] == 'leader_delayed':
                     time.sleep(3)
+                    
                 # attr = "current_round"
                 # val = 3
                 # setattr(attr, val)
             if M[0] == "process_vote_msg":
                 if config['test_case'] == 'crashed_while_voting':
-                    print("Exited from here!!!!!!!!!!!!!!!!!!!!!!")
                     self.exitFlag =  True
                 elif config['test_case'] == 'vote_message_dropped':
                     pass
@@ -450,7 +451,6 @@ class ReplicaFI(process, Replica):
         process_new_round_event(self.last_tc)
         while True:
             if await(self.exitFlag):
-                print("***************REached the end*************")
                 exit()
             elif await(self.doneFlag and self.mempool.allCommitted()):
                 break
