@@ -371,6 +371,13 @@ class Replica(process):
     #################################################################
     ############## End LeaderElection Function Definitions #############
 
+
+    '''
+        Pseudocode in Paper:
+        Block-Tree.process_qc(qc)
+        LeaderElection.update_leaders(qc)
+        Pacemaker.advance_round(qc.vote_info.round)
+    '''
     def process_certificate_qc(qc):
         wasCommitted, client = self.blockTree.process_qc(qc)
         if wasCommitted and client is not None and client != "":
@@ -381,6 +388,13 @@ class Replica(process):
 
         self.Pacemaker_advance_round_qc(qc)
 
+    '''
+        Pseudocode in Paper:
+        if u = LeaderElection.get_leader(Pacemaker.current_round) then
+            // Leader code: generate proposal.
+            b <- Block-Tree:generate_block(MemPool.get_transactions(), Pacemaker.current_round)
+            broadcast ProposalMsg(b, last_tc, Block-Tree.high_commit_qc)
+    '''
     def process_new_round_event(last_tc):
         # Not sure what they are trying to check
         # TODO: Check code, change to get_leader and self.pacemaker.curr_round
@@ -424,6 +438,14 @@ class Replica(process):
     # I am confused if this is the same vote handler
     # because the sequence of these proceders in the papaer is different
 
+
+    '''
+        Pseudocode in Paper:
+        qc <- Block-Tree.process_vote(M)
+        if qc != None then
+            process_certificate_qc(qc)
+            process_new_round_event(None)
+    '''
     def receive(msg=("process_vote_msg", V), from_=c):
         # output(" Received vote message from  ", c, " FOR ROUND ",
         #    self.pacemaker_current_round, " ----------")
@@ -455,6 +477,20 @@ class Replica(process):
                    self.pacemaker_current_round, " !!!!!!!!!")
             pass
 
+    '''
+        Pseudocode in Paper:
+        process_certificate_qc(P.block.qc)
+        process_certificate_qc(P.high_commit_qc)
+        Pacemaker.advance_round_tc(P.last_round_tc)
+        round <- Pacemaker.current_round
+        leader <- LeaderElection.get_leader(current_round)
+        if P.block.round != round or P.sender != leader or P.block.author != leader then
+            return
+        Block-Tree.execute_and_insert(P) // Adds a new speculative state to the Ledger
+        vote_msg <- Safety:make_vote(P.block; P.last_round_tc)
+        if vote_msg != None then
+            send vote_msg to LeaderElection.get_leader(current_round + 1)
+    '''
     def receive(msg=("process_proposal_message", P), from_=r):
         # output("---------- RECEIVED PROPOSAL MESSAGE FROM ", r, " FOR ROUND ",
         #        self.pacemaker_current_round, " ----------")
@@ -536,6 +572,17 @@ class Replica(process):
                 # P = P[0]
                 # output("I got data from all")
 
+
+    '''
+        Pseudocode in Paper:
+        process_certificate_qc(M.tmo_info.high_qc)
+        process_certificate_qc(M.high_commit_qc)
+        Pacemaker.advance_round_tc(M.last_round_tc)
+        tc <- Pacemaker.process_remote_timeout(M)
+        if tc != None then
+            Pacemaker.advance_round(tc)
+            process_new_round_event(tc)
+    '''
     def receive(msg=("process_timeout_message", T), from_=c):
         verifyKeySender = VerifyKey(self.replicaPublicKeyMap[c])
         try:
