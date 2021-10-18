@@ -25,8 +25,8 @@ import traceback
 class ProposalMsg:
     def __init__(self, block, last_tc, high_commit_qc, safety):
         self.block = block
-        self.last_tc = last_tc
-        self.high_commit_qc = high_commit_qc
+        self.last_tc = last_tc   # TC for block.round - 1 if block.qc.vote_info.round != block.round - 1, else None
+        self.high_commit_qc = high_commit_qc   # QC to synchronize on committed blocks
         self.signature = safety.sign(self.block.id)
 
 
