@@ -37,7 +37,6 @@ class Client(process):
             # TODO: use another variable to store validators
             send(('Request', request, msg_to_send, digest),
                  to=self.replicaPublicKeyMap.keys())
-            # if await(some(received(('Reply',_)))):
 
             if await(len(setof(r, received(('Reply', _), from_=r))) > self.f + 1):
                 self.request_number += 1

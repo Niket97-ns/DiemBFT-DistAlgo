@@ -318,9 +318,9 @@ class Replica(process):
             if self == self.validators[2]:
                 output("I crashed")
 
-                # time.sleep(4)
+            # time.sleep(4)
                 # self.exitFlagCrashing = True
-                # self.proposalMsgFlag = True
+            # self.proposalMsgFlag = True
                 # exit()
                 time.sleep(2)
             # send()

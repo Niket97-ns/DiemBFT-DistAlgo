@@ -70,7 +70,7 @@ def main():
     #             {"numberOfClients": 1, "numberOfReplicas": 4,
     #             "numberOfFaulty": 2, "test_case": "leader_delay"}]
 
-    configs = [{"numberOfClients": 1, "numberOfReplicas": 4,
+    configs = [{"numberOfClients": 2, "numberOfReplicas": 7,
                 "numberOfFaulty": 0, "test_case": "leader_crashed"}]
 
     for config in configs:
